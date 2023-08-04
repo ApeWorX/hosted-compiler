@@ -1,3 +1,4 @@
-fastapi [all]
+eth-ape
+fastapi
 pytest
-taskiq
+uvicorn[standard]
