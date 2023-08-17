@@ -2,3 +2,6 @@ eth-ape
 fastapi
 pytest
 uvicorn[standard]
+eth-ape
+vyper
+ape-vyper

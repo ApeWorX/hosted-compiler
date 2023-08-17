@@ -8,6 +8,14 @@ from enum import Enum
 from typing import Dict, Optional, List
 from ethpm_types import PackageManifest
 
+import tempfile
+import shutil
+import vyper
+
+from ape import compilers
+from pathlib import Path
+
+PackageManifest.update_forward_refs()
 app = FastAPI()
 
 class TaskStatus(Enum):
@@ -100,3 +108,42 @@ async def get_compiled_artifact(task_id: str):
         raise HTTPException(status_code=404, detail="Task is not completed with Success status")
     
     return tasks[task_id].manifest
+
+
+
+def compile_and_get_manifest():
+    request_files = ["/home/chris/_src/vyper/request_files/NFT.vy", 
+                     "/home/chris/_src/vyper/request_files/Token.vy"]
+    
+# Create a temporary directory
+    temp_ape_project = Path(tempfile.mkdtemp(""))
+    sub_dir = ['contracts', 'scripts', 'tests']
+    for dir in sub_dir:
+        os.mkdir(temp_ape_project / dir)
+
+# add request contracts in temp directory
+    for file in request_files:
+        print(file)
+        shutil.copy(file, temp_ape_project/'contracts'/file.split('/')[-1])
+        
+    for file in temp_ape_project.glob('*/*'):
+        print(file)
+
+    try:
+        # Compile the files using the Ape library
+        vyper = compilers.get_compiler("vyper")
+        
+        contract_list = vyper.compile([x for x in  temp_ape_project.glob('contracts/*')])
+ 
+        print(contract_list)
+
+    finally:
+        # Clean up the temporary directory
+        shutil.rmtree(temp_ape_project)
+
+# Call the function to compile files and get the manifest
+manifest_content = compile_and_get_manifest()
+
+# # Print the manifest content
+# print("Manifest Content:")
+# print(manifest_content)
