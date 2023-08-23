@@ -4,17 +4,26 @@ from main import app
 
 client = TestClient(app)
 
+
 def test_create_compilation_task():
     # Test create compilation task
     response = client.post("/compile/")
-    assert response.status_code == 422  # Since the files parameter is missing, it should return 422 Unprocessable Entity
+    assert (
+        response.status_code == 422
+    )  # Since the files parameter is missing, it should return 422 Unprocessable Entity
 
     # Upload a valid Vyper file
-    files = {"files": ("my_contract.vy", open("path_to_your_vyper_file/my_contract.vy", "rb"))}
+    files = {
+        "files": (
+            "my_contract.vy",
+            open("path_to_your_vyper_file/my_contract.vy", "rb"),
+        )
+    }
     response = client.post("/compile/", files=files, data={"vyper_version": "0.2.10"})
     assert response.status_code == 200
     data = response.json()
     assert "task_id" in data
+
 
 def test_get_task_status():
     # Test get task status
@@ -25,6 +34,7 @@ def test_get_task_status():
     assert response.status_code == 200
     data = response.json()
     assert data in ["In Progress", "Success", "Error"]
+
 
 def test_get_task_exceptions():
     # Test get task exceptions
@@ -38,6 +48,7 @@ def test_get_task_exceptions():
     assert "task_id" in data
     assert "compilation_errors" in data
 
+
 def test_get_compiled_artifact():
     # Test get compiled artifact
     response = client.get("/compiled_artifact/some_invalid_task_id")
@@ -50,4 +61,3 @@ def test_get_compiled_artifact():
     assert "contract_name" in data
     assert "abi" in data
     assert "compiler" in data
-
