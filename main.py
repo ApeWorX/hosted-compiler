@@ -12,8 +12,10 @@ import tempfile
 import shutil
 import vyper
 
-from ape import compilers
+from ape import compilers, config
 from pathlib import Path
+
+
 
 PackageManifest.update_forward_refs()
 app = FastAPI()
@@ -29,8 +31,9 @@ class Task(BaseModel):
     exceptions: List[str] = []
     manifest : Optional[PackageManifest] = None
 
-    
-tasks: Dict[str,Task] = {}
+#global db
+results = {}
+tasks: Dict[str,TaskStatus] = {}
 
 def is_supported_language(filename):
     # Add your supported languages here (Vyper)
@@ -38,45 +41,20 @@ def is_supported_language(filename):
     _, file_extension = os.path.splitext(filename)
     return file_extension.lower() in supported_languages
 
-async def compile_files(task_id, files, vyper_version):
-    # Your Vyper compilation logic here
-    # This is just a dummy example that prints the filenames and Vyper version
-    tasks[task_id] = Task(id=task_id)
-    print(f"Task ID: {task_id}")
-
-# TODO Make this do something with ape to compile the files into a manifest
-
-    await asyncio.sleep(60)
-    print("Files to compile:")
-    for file in files:
-        print(file)
-    print(f"Vyper version: {vyper_version}")
-    tasks[task_id].status = random.choice([TaskStatus.FAILED, TaskStatus.SUCCESS])
-
-    if tasks[task_id].status is TaskStatus.FAILED:
-        tasks[task_id].exceptions = [
-            str(Exception("Bad choice")),
-            str(Exception("Wrenches")),
-        ]
-    else:
-        tasks[task_id].manifest = PackageManifest()
-
 @app.post("/compile/")
 async def create_compilation_task(
     background_tasks: BackgroundTasks,
     files: List[UploadFile],
     vyper_version: str = Query(..., title="Vyper version to use for compilation"),
-):
-    supported_files = [file.filename for file in files if is_supported_language(file.filename)]
-    if not supported_files:
-        raise HTTPException(status_code=400, detail="Unsupported file format or language")
+):  
+    content = await files[0].read()
+    project_root = Path(tempfile.mkdtemp(""))
 
-    # Generate a task ID (for demonstration purposes, you can use a more robust method in a real application)
-    task_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-
+    tasks[project_root.name] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
-    background_tasks.add_task(compile_files, task_id, supported_files, vyper_version)
-    return {"task_id": task_id}
+    background_tasks.add_task(compile_project, project_root, files)
+
+    return project_root.name
 
 
 @app.get("/status/{task_id}")
@@ -86,7 +64,7 @@ async def get_task_status(task_id: str) -> TaskStatus:
     # Here, we just return random statuses for illustration purposes
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
-    return tasks[task_id].status
+    return tasks[task_id]
 
 @app.get("/exceptions/{task_id}")
 async def get_task_exceptions(task_id: str) -> List[str]:
@@ -96,7 +74,7 @@ async def get_task_exceptions(task_id: str) -> List[str]:
         raise HTTPException(status_code=404, detail="task id not found")
     if tasks[id].status is not TaskStatus.FAILED:
         raise HTTPException(status_code=400, detail="Task is not completed with Error status")
-    return tasks[task_id].exceptions
+    return tasks[task_id]
 
 @app.get("/compiled_artifact/{task_id}", response_model = PackageManifest)
 async def get_compiled_artifact(task_id: str):
@@ -104,46 +82,30 @@ async def get_compiled_artifact(task_id: str):
     # This is just a dummy example, you should handle the response data accordingly based on the actual compilation result
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
-    if tasks[task_id].status is not TaskStatus.SUCCESS:
+    if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(status_code=404, detail="Task is not completed with Success status")
     
-    return tasks[task_id].manifest
+    return results[task_id]
 
 
 
-def compile_and_get_manifest():
-    request_files = ["/home/chris/_src/vyper/request_files/NFT.vy", 
-                     "/home/chris/_src/vyper/request_files/Token.vy"]
-    
-# Create a temporary directory
-    temp_ape_project = Path(tempfile.mkdtemp(""))
-    sub_dir = ['contracts', 'scripts', 'tests']
-    for dir in sub_dir:
-        os.mkdir(temp_ape_project / dir)
+async def compile_project(project_root: Path, files: List[UploadFile]):
+
+# Create a contracts directory
+    contracts_dir = project_root / "contracts"
+    contracts_dir.mkdir()
 
 # add request contracts in temp directory
-    for file in request_files:
-        print(file)
-        shutil.copy(file, temp_ape_project/'contracts'/file.split('/')[-1])
+# files[0].headers["content-disposition"].split("; ")[-1].split("=")[-1].strip('"')
+    for file in files:
+        filename = file.headers["content-disposition"].split("; ")[-1].split("=")[-1].strip('"')
+        content = await file.read()
+        (project_root / 'contracts'/ filename).write_text(content.decode("utf-8"))
         
-    for file in temp_ape_project.glob('*/*'):
-        print(file)
+#compile project
+    with config.using_project(project_root) as project:
+        results[project_root.name] = project.extract_manifest()
+    
+    tasks[project_root.name] = TaskStatus.SUCCESS
 
-    try:
-        # Compile the files using the Ape library
-        vyper = compilers.get_compiler("vyper")
-        
-        contract_list = vyper.compile([x for x in  temp_ape_project.glob('contracts/*')])
- 
-        print(contract_list)
-
-    finally:
-        # Clean up the temporary directory
-        shutil.rmtree(temp_ape_project)
-
-# Call the function to compile files and get the manifest
-manifest_content = compile_and_get_manifest()
-
-# # Print the manifest content
-# print("Manifest Content:")
-# print(manifest_content)
+    
