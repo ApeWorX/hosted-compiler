@@ -1,5 +1,4 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Query
-import asyncio
 import os
 from pydantic import BaseModel
 from enum import Enum
@@ -7,14 +6,14 @@ from typing import Dict, Optional, List
 from ethpm_types import PackageManifest
 
 import tempfile
-import vyper
-import ipdb
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 from ape import compilers, config
 from pathlib import Path
+
+
 
 
 PackageManifest.update_forward_refs()
@@ -55,6 +54,10 @@ async def create_compilation_task(
     files: List[UploadFile],
     vyper_version: str = Query(..., title="Vyper version to use for compilation"),
 ):
+    """
+    Creates the task with the list of vyper contracts to compile 
+    and sets each file with a task.
+    """
     project_root = Path(tempfile.mkdtemp(""))
 
     # Create a contracts directory
@@ -99,8 +102,9 @@ async def get_task_exceptions(task_id: str) -> List[str]:
 
 @app.get("/compiled_artifact/{task_id}")
 async def get_compiled_artifact(task_id: str) -> Dict:
-    # Fetch the compiled artifact data in ethPM v3 format for a particular task
-    # This is just a dummy example, you should handle the response data accordingly based on the actual compilation result
+    """
+    Fetch the compiled artifact data in ethPM v3 format for a particular task
+    """
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
@@ -112,7 +116,9 @@ async def get_compiled_artifact(task_id: str) -> Dict:
 
 
 async def compile_project(project_root: Path, files: List[UploadFile]):
-    # compile project
+    """
+    Compile the contrct and asssign the taskid to it
+    """
     with config.using_project(project_root) as project:
         results[project_root.name] = project.extract_manifest()
     tasks[project_root.name] = TaskStatus.SUCCESS
