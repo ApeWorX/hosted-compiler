@@ -36,9 +36,6 @@ class Task(BaseModel):
 results = {}
 tasks: Dict[str, TaskStatus] = {}
 
-#global db
-results = {}
-tasks: Dict[str,TaskStatus] = {}
 
 def is_supported_language(filename):
     """
@@ -94,7 +91,9 @@ async def get_task_exceptions(task_id: str) -> List[str]:
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
     if tasks[id].status is not TaskStatus.FAILED:
-        raise HTTPException(status_code=400, detail="Task is not completed with Error status")
+        raise HTTPException(
+            status_code=400, detail="Task is not completed with Error status"
+        )
     return tasks[task_id]
 
 
@@ -113,7 +112,6 @@ async def get_compiled_artifact(task_id: str) -> Dict:
     return results[task_id].dict()
 
 
-
 async def compile_project(project_root: Path, files: List[UploadFile]):
     """
     Compile the contrct and asssign the taskid to it
@@ -121,5 +119,3 @@ async def compile_project(project_root: Path, files: List[UploadFile]):
     with config.using_project(project_root) as project:
         results[project_root.name] = project.extract_manifest()
     tasks[project_root.name] = TaskStatus.SUCCESS
-
-    
