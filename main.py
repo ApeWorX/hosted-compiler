@@ -6,22 +6,17 @@ from typing import Dict, Optional, List
 from ethpm_types import PackageManifest
 
 import tempfile
+import vyper
+import ipdb
 
-<<<<<<< HEAD
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-=======
->>>>>>> bb1f7ac... feat: got a vyper compile to work
 from ape import compilers, config
 from pathlib import Path
 
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> bb1f7ac... feat: got a vyper compile to work
 PackageManifest.update_forward_refs()
 app = FastAPI()
 
@@ -61,9 +56,17 @@ async def create_compilation_task(
     background_tasks: BackgroundTasks,
     files: List[UploadFile],
     vyper_version: str = Query(..., title="Vyper version to use for compilation"),
-):  
-    content = await files[0].read()
+):
     project_root = Path(tempfile.mkdtemp(""))
+
+    # Create a contracts directory
+    contracts_dir = project_root / "contracts"
+    contracts_dir.mkdir()
+
+    # add request contracts in temp directory
+    for file in files:
+        content = (await file.read()).decode("utf-8")
+        (project_root / "contracts" / file.filename).write_text(content)
 
     tasks[project_root.name] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
@@ -92,37 +95,26 @@ async def get_task_exceptions(task_id: str) -> List[str]:
         raise HTTPException(status_code=400, detail="Task is not completed with Error status")
     return tasks[task_id]
 
+
 @app.get("/compiled_artifact/{task_id}")
 async def get_compiled_artifact(task_id: str) -> Dict:
-    """
-    Fetch the compiled artifact data in ethPM v3 format for a particular task
-    """
+    # Fetch the compiled artifact data in ethPM v3 format for a particular task
+    # This is just a dummy example, you should handle the response data accordingly based on the actual compilation result
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
-        raise HTTPException(status_code=404, detail="Task is not completed with Success status")
-    
-    return results[task_id]
+        raise HTTPException(
+            status_code=404, detail="Task is not completed with Success status"
+        )
+    # TODO Debug why it is producing serialize_response raise ResponseValidationError( fastapi.exceptions.ResponseValidationError ) when you use return results[task_id] as a PackageManifest
+    return results[task_id].dict()
 
 
 
 async def compile_project(project_root: Path, files: List[UploadFile]):
-
-# Create a contracts directory
-    contracts_dir = project_root / "contracts"
-    contracts_dir.mkdir()
-
-# add request contracts in temp directory
-# files[0].headers["content-disposition"].split("; ")[-1].split("=")[-1].strip('"')
-    for file in files:
-        filename = file.headers["content-disposition"].split("; ")[-1].split("=")[-1].strip('"')
-        content = await file.read()
-        (project_root / 'contracts'/ filename).write_text(content.decode("utf-8"))
-        
-#compile project
+    # compile project
     with config.using_project(project_root) as project:
         results[project_root.name] = project.extract_manifest()
-    
     tasks[project_root.name] = TaskStatus.SUCCESS
 
     
