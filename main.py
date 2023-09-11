@@ -15,7 +15,6 @@ from pathlib import Path
 
 
 
-
 PackageManifest.update_forward_refs()
 app = FastAPI()
 
@@ -46,7 +45,6 @@ def is_supported_language(filename):
     supported_languages = [".vy"]
     _, file_extension = os.path.splitext(filename)
     return file_extension.lower() in supported_languages
-
 
 @app.post("/compile/")
 async def create_compilation_task(
@@ -84,7 +82,6 @@ async def get_task_status(task_id: str) -> TaskStatus:
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
     return tasks[task_id]
-
 
 @app.get("/exceptions/{task_id}")
 async def get_task_exceptions(task_id: str) -> List[str]:
