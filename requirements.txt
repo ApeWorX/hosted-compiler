@@ -5,3 +5,4 @@ uvicorn[standard]
 eth-ape
 vyper
 ape-vyper
+python-multipart
