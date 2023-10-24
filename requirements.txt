@@ -6,3 +6,4 @@ eth-ape
 vyper
 ape-vyper
 python-multipart
+vvm>=0.2
