@@ -20,3 +20,8 @@ Using the post route: Upload the contract file and version number of vyper.
 Wait for it compile and while you wait, you can use the temporary directory name is the task ID to check the status of it.
 
 Once it says success, you can use the `get compiled artifact` route and return the manifest of the contract.
+
+
+## Docker implementation
+
+To use the docker implementation, use `docker build -t hosted-compiler .` to build the `Dockerfile` and then use `docker run -p 8000:8000 hosted-compiler` to run the built container.
