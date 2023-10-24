@@ -6,17 +6,30 @@ on:
 
   pull_request:
 
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY: apeworx/hosted-compiler
+
 jobs:
   docker-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
+      - name: Log into registry ${{ env.REGISTRY }}
+        # Ensure this doesn't trigger on PR's
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+            registry: ${{ env.REGISTRY }}
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Image
         id: build-image
         env:
-          REGISTRY: ghcr.io
-          REPOSITORY: apeworx/hosted-compiler
+          REGISTRY: ${{env.REGISTRY}}
+          REPOSITORY: ${{env.REPOSITORY}}
           # NOTE: Our image tagging scheme is to tag all builds on "main" with "latest",
           #       and then when publishing to tag it with the release version tag + "stable"
           IMAGE_TAG: latest
