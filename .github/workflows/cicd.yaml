@@ -16,7 +16,7 @@ jobs:
         id: build-image
         env:
           REGISTRY: ghcr.io
-          IMAGE_NAME: ${{ github.repository }}
+          IMAGE_NAME: apeworx/hosted-compiler
           # NOTE: Our image tagging scheme is to tag all builds on "main" with "latest",
           #       and then when publishing to tag it with the release version tag + "stable"
           IMAGE_TAG: latest
