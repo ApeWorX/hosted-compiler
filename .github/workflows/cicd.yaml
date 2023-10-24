@@ -1,0 +1,34 @@
+name: CI/CD
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build Image
+        id: build-image
+        env:
+          # NOTE: Our image tagging scheme is to tag all builds on "main" with "latest",
+          #       and then when publishing to tag it with the release version tag + "stable"
+          IMAGE_TAG: latest
+        run: |
+          docker build \
+            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+            .
+          echo "image=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Publish Image
+        # Skip on PRs
+        if: github.event_name != 'pull_request'
+        run: docker push ${{ steps.build-image.outputs.image }}
