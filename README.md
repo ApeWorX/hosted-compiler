@@ -24,4 +24,4 @@ Once it says success, you can use the `get compiled artifact` route and return t
 
 ## Docker implementation
 
-To use the docker implementation, use `docker build -t hosted-compiler .` to build the `Dockerfile` and then use `docker run -p 8000:8000 hosted-compiler` to run the built container.
+To use the docker implementation: `docker run -p 8000:8000  ghcr.io/apeworx/hosted-compiler:latest`.
