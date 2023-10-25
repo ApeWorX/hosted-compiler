@@ -20,8 +20,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        # NOTE: When running `npm run dev`, this is the URL
-        "http://localhost:5173",
+        # NOTE: When running remix in local dev, this is the URL
+        "http://localhost:8080",
         # NOTE: When running `npm run build && npm run preview`, this is the URL
         "http://localhost:4173",
         # NOTE: This is where the UI gets hosted
