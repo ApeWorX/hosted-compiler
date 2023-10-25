@@ -26,6 +26,8 @@ app.add_middleware(
         "http://localhost:4173",
         # NOTE: This is where the UI gets hosted
         "https://remix.ethereum.org",
+        "https://remix-alpha.ethereum.org",
+        "https://remix-beta.ethereum.org",
     ],
     allow_credentials=True,
     allow_methods=["*"],
