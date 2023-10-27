@@ -1,21 +1,15 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Query
 import os
-from pydantic import BaseModel
-from enum import Enum
-from typing import Dict, Optional, List
-from ethpm_types import PackageManifest
-
 import tempfile
-
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-from ape_vyper.exceptions import VyperInstallError, VyperCompileError
-from ape import config
-import yaml
-
+from enum import Enum
 from pathlib import Path
+from typing import Dict, List, Optional
 
+import yaml
+from ape import config
+from ape_vyper.exceptions import VyperCompileError, VyperInstallError
+from ethpm_types import PackageManifest
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 
 PackageManifest.update_forward_refs()
 app = FastAPI()
@@ -56,8 +50,8 @@ async def create_compilation_task(
     vyper_version: str = Query(..., title="Vyper version to use for compilation"),
 ):
     """
-    Creates the task with the list of vyper contracts to compile
-    and sets each file with a task.
+    Creates the task with the list of vyper contracts.
+    Compile and sets each file with a task.
     """
     project_root = Path(tempfile.mkdtemp(""))
 
@@ -67,12 +61,12 @@ async def create_compilation_task(
 
     # add request contracts in temp directory
     for file in files:
-        content = (await file.read())
+        content = await file.read()
         (project_root / "contracts" / file.filename).write_bytes(content)
 
     config_override = dict()
     if vyper_version:
-        config_override["vyper"] = dict(version = vyper_version)
+        config_override["vyper"] = dict(version=vyper_version)
 
     tasks[project_root.name] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
@@ -124,21 +118,19 @@ async def compile_project(project_root: Path, config_override: dict):
     """
     Compile the contrct and asssign the taskid to it
     """
-    (project_root/"ape-config.yaml").write_text(yaml.safe_dump(config_override))
+    (project_root / "ape-config.yaml").write_text(yaml.safe_dump(config_override))
 
     with config.using_project(project_root) as project:
-        # TODO Handle and add more Error Types to except 
-        
+        # TODO Handle and add more Error Types to except
+
         # compile contracts in folder wholesale
         try:
             project.load_contracts(use_cache=False)
             results[project_root.name] = project.extract_manifest()
             tasks[project_root.name] = TaskStatus.SUCCESS
         except VyperInstallError as e:
-             results[project_root.name] = [str(e)]
-             tasks[project_root.name] = TaskStatus.FAILED
+            results[project_root.name] = [str(e)]
+            tasks[project_root.name] = TaskStatus.FAILED
         except VyperCompileError as e:
             results[project_root.name] = [str(e)]
             tasks[project_root.name] = TaskStatus.FAILED
-    
-    
