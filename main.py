@@ -10,7 +10,10 @@ import tempfile
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from ape import compilers, config
+from ape_vyper.exceptions import VyperInstallError, VyperCompileError
+from ape import config
+import yaml
+
 from pathlib import Path
 
 
@@ -64,12 +67,16 @@ async def create_compilation_task(
 
     # add request contracts in temp directory
     for file in files:
-        content = (await file.read()).decode("utf-8")
-        (project_root / "contracts" / file.filename).write_text(content)
+        content = (await file.read())
+        (project_root / "contracts" / file.filename).write_bytes(content)
+
+    config_override = dict()
+    if vyper_version:
+        config_override["vyper"] = dict(version = vyper_version)
 
     tasks[project_root.name] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
-    background_tasks.add_task(compile_project, project_root, files)
+    background_tasks.add_task(compile_project, project_root, config_override)
 
     return project_root.name
 
@@ -91,11 +98,11 @@ async def get_task_exceptions(task_id: str) -> List[str]:
     """
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
-    if tasks[id].status is not TaskStatus.FAILED:
+    if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
             status_code=400, detail="Task is not completed with Error status"
         )
-    return tasks[task_id]
+    return results[task_id]
 
 
 @app.get("/compiled_artifact/{task_id}")
@@ -113,10 +120,25 @@ async def get_compiled_artifact(task_id: str) -> Dict:
     return results[task_id].dict()
 
 
-async def compile_project(project_root: Path, files: List[UploadFile]):
+async def compile_project(project_root: Path, config_override: dict):
     """
     Compile the contrct and asssign the taskid to it
     """
+    (project_root/"ape-config.yaml").write_text(yaml.safe_dump(config_override))
+
     with config.using_project(project_root) as project:
-        results[project_root.name] = project.extract_manifest()
-    tasks[project_root.name] = TaskStatus.SUCCESS
+        # TODO Handle and add more Error Types to except 
+        
+        # compile contracts in folder wholesale
+        try:
+            project.load_contracts(use_cache=False)
+            results[project_root.name] = project.extract_manifest()
+            tasks[project_root.name] = TaskStatus.SUCCESS
+        except VyperInstallError as e:
+             results[project_root.name] = [str(e)]
+             tasks[project_root.name] = TaskStatus.FAILED
+        except VyperCompileError as e:
+            results[project_root.name] = [str(e)]
+            tasks[project_root.name] = TaskStatus.FAILED
+    
+    
