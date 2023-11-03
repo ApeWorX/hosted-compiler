@@ -116,13 +116,19 @@ async def get_compiled_artifact(task_id: str) -> Dict:
 
 async def compile_project(project_root: Path, config_override: dict):
     """
-    Compile the contrct and asssign the taskid to it
+    Compile the contract and assign the taskid to it
     """
     (project_root / "ape-config.yaml").write_text(yaml.safe_dump(config_override))
 
     with config.using_project(project_root) as project:
         # TODO Handle and add more Error Types to except
+        """
+        Suggestion to make it easier to read:
 
+        except (VyperInstallError, VyperCompileError):
+            results[project_root.name] = [str(e)]
+            tasks[project_root.name] = TaskStatus.FAILED
+        """
         # compile contracts in folder wholesale
         try:
             project.load_contracts(use_cache=False)
