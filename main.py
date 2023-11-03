@@ -1,3 +1,5 @@
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Query
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import tempfile
 from enum import Enum
@@ -13,6 +15,22 @@ from pydantic import BaseModel
 
 PackageManifest.update_forward_refs()
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        # NOTE: When running remix in local dev, this is the URL
+        "http://localhost:8080",
+        # NOTE: When running `npm run build && npm run preview`, this is the URL
+        "http://localhost:4173",
+        # NOTE: This is where the UI gets hosted
+        "https://remix.ethereum.org",
+        "https://remix-alpha.ethereum.org",
+        "https://remix-beta.ethereum.org",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class TaskStatus(Enum):
