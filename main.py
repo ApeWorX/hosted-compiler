@@ -118,6 +118,7 @@ async def compile_project(project_root: Path, config_override: dict):
     """
     Compile the contract and assign the taskid to it
     """
+    (project_root / "ape-config.yaml").unlink(missing_ok=True)
     (project_root / "ape-config.yaml").write_text(yaml.safe_dump(config_override))
 
     with config.using_project(project_root) as project:
