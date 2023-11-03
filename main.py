@@ -66,8 +66,8 @@ def is_supported_language(filename):
 @app.post("/compile/")
 async def create_compilation_task(
     background_tasks: BackgroundTasks,
-    files: List[UploadFile],
-    vyper_version: str = Query(..., title="Vyper version to use for compilation"),
+    manifest: PackageManifest,
+
 ):
     """
     Creates the task with the list of vyper contracts to compile
@@ -75,18 +75,9 @@ async def create_compilation_task(
     """
     project_root = Path(tempfile.mkdtemp(""))
 
-    # Create a contracts directory
-    contracts_dir = project_root / "contracts"
-    contracts_dir.mkdir()
-
-    # add request contracts in temp directory
-    for file in files:
-        content = (await file.read()).decode("utf-8")
-        (project_root / "contracts" / file.filename).write_text(content)
-
     tasks[project_root.name] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
-    background_tasks.add_task(compile_project, project_root, files)
+    background_tasks.add_task(compile_project, project_root, manifest)
 
     return project_root.name
 
@@ -116,7 +107,7 @@ async def get_task_exceptions(task_id: str) -> List[str]:
 
 
 @app.get("/compiled_artifact/{task_id}")
-async def get_compiled_artifact(task_id: str) -> Dict:
+async def get_compiled_artifact(task_id: str) -> PackageManifest:
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
@@ -127,13 +118,27 @@ async def get_compiled_artifact(task_id: str) -> Dict:
             status_code=404, detail="Task is not completed with Success status"
         )
     # TODO Debug why it is producing serialize_response raise ResponseValidationError( fastapi.exceptions.ResponseValidationError ) when you use return results[task_id] as a PackageManifest
-    return results[task_id].dict()
+    return results[task_id]
 
 
-async def compile_project(project_root: Path, files: List[UploadFile]):
+async def compile_project(project_root: Path, manifest: PackageManifest):
     """
     Compile the contrct and asssign the taskid to it
     """
+    # Create a contracts directory
+    contracts_dir = project_root / "contracts"
+    contracts_dir.mkdir()
+
+    # add request contracts in temp directory
+    for filename, source in manifest.sources.items():
+        path = (project_root / "contracts" / filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source.fetch_content())
+
+    (project_root / ".build").mkdir()
+
+    (project_root / ".build" / "__local__.json").write_text(manifest.json())
+
     with config.using_project(project_root) as project:
         results[project_root.name] = project.extract_manifest()
     tasks[project_root.name] = TaskStatus.SUCCESS
