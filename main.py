@@ -1,5 +1,3 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Query
-from fastapi.middleware.cors import CORSMiddleware
 import os
 import tempfile
 from enum import Enum
@@ -10,7 +8,9 @@ import yaml
 from ape import config
 from ape_vyper.exceptions import VyperCompileError, VyperInstallError
 from ethpm_types import PackageManifest
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, UploadFile
+from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Query,
+                     UploadFile)
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 PackageManifest.update_forward_refs()
