@@ -15,8 +15,50 @@ from ape import compilers, config
 from pathlib import Path
 
 
+from fastapi import FastAPI, Request
+from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
+from fastapi.responses import HTMLResponse
+
+
+def init_openapi(app: FastAPI):
+    # https://github.com/tiangolo/fastapi/discussions/10524
+    # Copied from FastAPI, and customized the version
+    async def swagger_ui_html(req: Request) -> HTMLResponse:
+        root_path = req.scope.get("root_path", "").rstrip("/")
+        openapi_url = root_path + app.openapi_url
+        oauth2_redirect_url = app.swagger_ui_oauth2_redirect_url
+        if oauth2_redirect_url:
+            oauth2_redirect_url = root_path + oauth2_redirect_url
+        return get_swagger_ui_html(
+            openapi_url=openapi_url,
+            title=app.title + " - Swagger UI",
+            oauth2_redirect_url=oauth2_redirect_url,
+            init_oauth=app.swagger_ui_init_oauth,
+            swagger_ui_parameters=app.swagger_ui_parameters,
+            swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js",
+            swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css",
+        )
+
+    app.add_route('/docs', swagger_ui_html, include_in_schema=False)
+
+    if app.swagger_ui_oauth2_redirect_url:
+
+        async def swagger_ui_redirect(req: Request) -> HTMLResponse:
+            return get_swagger_ui_oauth2_redirect_html()
+
+        app.add_route(
+            app.swagger_ui_oauth2_redirect_url,
+            swagger_ui_redirect,
+            include_in_schema=False,
+        )
+
+
+app = FastAPI(
+    docs_url=None,  # https://github.com/tiangolo/fastapi/discussions/10524
+)
+init_openapi(app)
+
 PackageManifest.update_forward_refs()
-app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
