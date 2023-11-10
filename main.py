@@ -141,7 +141,7 @@ async def get_task_exceptions(task_id: str) -> List[str]:
     """
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail="task id not found")
-    if tasks[id].status is not TaskStatus.FAILED:
+    if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
             status_code=400, detail="Task is not completed with Error status"
         )
