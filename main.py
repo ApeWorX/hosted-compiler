@@ -182,5 +182,9 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     (project_root / ".build" / "__local__.json").write_text(manifest.json())
 
     with config.using_project(project_root) as project:
-        results[project_root.name] = project.extract_manifest()
-    tasks[project_root.name] = TaskStatus.SUCCESS
+         try:
+             results[project_root.name] = project.extract_manifest()
+             tasks[project_root.name] = TaskStatus.SUCCESS
+         except Exception as e:
+             results[project_root.name] = [str(e)]
+             tasks[project_root.name] = TaskStatus.FAILED
