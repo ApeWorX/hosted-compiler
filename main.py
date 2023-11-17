@@ -70,12 +70,12 @@ app.add_middleware(
         "https://remix.ethereum.org",
         "https://remix-alpha.ethereum.org",
         "https://remix-beta.ethereum.org",
+        "https://deploy-preview-*--remixproject.netlify.app/",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 class TaskStatus(Enum):
     PENDING = "PENDING"
@@ -105,11 +105,10 @@ def is_supported_language(filename):
     return file_extension.lower() in supported_languages
 
 
-@app.post("/compile/")
+@app.post("/compile")
 async def create_compilation_task(
     background_tasks: BackgroundTasks,
     manifest: PackageManifest,
-
 ):
     """
     Creates the task with the list of vyper contracts to compile
@@ -172,13 +171,14 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     contracts_dir.mkdir()
 
     # add request contracts in temp directory
-    for filename, source in manifest.sources.items():
-        path = (project_root / "contracts" / filename)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(source.fetch_content())
+    if manifest.sources:
+        for filename, source in manifest.sources.items():
+            path = (contracts_dir / filename)
+            # NOTE: In case there is a multi-level path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(source.fetch_content())
 
     (project_root / ".build").mkdir()
-
     (project_root / ".build" / "__local__.json").write_text(manifest.json())
 
     with config.using_project(project_root) as project:
