@@ -1,23 +1,20 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Query
-from fastapi.middleware.cors import CORSMiddleware
-import os
-from pydantic import BaseModel
-from enum import Enum
-from typing import Dict, Optional, List
-from ethpm_types import PackageManifest
-
-import tempfile
-
 import asyncio
+import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from enum import Enum
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from ape import compilers, config
-from pathlib import Path
-
-
-from fastapi import FastAPI, Request
-from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
-from fastapi.responses import HTMLResponse
+from ethpm_types import PackageManifest
+from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Query,
+                     Request, UploadFile)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import (get_swagger_ui_html,
+                                  get_swagger_ui_oauth2_redirect_html)
+from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel
 
 
 def init_openapi(app: FastAPI):
@@ -39,7 +36,7 @@ def init_openapi(app: FastAPI):
             swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css",
         )
 
-    app.add_route('/docs', swagger_ui_html, include_in_schema=False)
+    app.add_route("/docs", swagger_ui_html, include_in_schema=False)
 
     if app.swagger_ui_oauth2_redirect_url:
 
@@ -76,6 +73,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class TaskStatus(Enum):
     PENDING = "PENDING"
@@ -116,11 +114,12 @@ async def create_compilation_task(
     """
     project_root = Path(tempfile.mkdtemp(""))
 
-    tasks[project_root.name] = TaskStatus.PENDING
+    task_id = project_root.name
+    tasks[task_id] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
     background_tasks.add_task(compile_project, project_root, manifest)
 
-    return project_root.name
+    return task_id
 
 
 @app.get("/status/{task_id}")
@@ -129,7 +128,7 @@ async def get_task_status(task_id: str) -> TaskStatus:
     Check the status of each task
     """
     if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="task id not found")
+        raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     return tasks[task_id]
 
 
@@ -139,32 +138,32 @@ async def get_task_exceptions(task_id: str) -> List[str]:
     Fetch the exception information for a particular compilation task
     """
     if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="task id not found")
+        raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
-            status_code=400, detail="Task is not completed with Error status"
+            status_code=400, detail=f"Task '{task_id}' is not completed with Error status"
         )
     return tasks[task_id]
 
 
-@app.get("/compiled_artifact/{task_id}")
-async def get_compiled_artifact(task_id: str) -> PackageManifest:
+@app.get("/compiled_artifact/{task_id}", response_class=JSONResponse)
+async def get_compiled_artifact(task_id: str):
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
     if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="task id not found")
+        raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(
-            status_code=404, detail="Task is not completed with Success status"
+            status_code=404, detail=f"Task '{task_id}' is not completed with Success status"
         )
-    # TODO Debug why it is producing serialize_response raise ResponseValidationError( fastapi.exceptions.ResponseValidationError ) when you use return results[task_id] as a PackageManifest
-    return results[task_id]
+
+    return results[task_id].json()
 
 
 async def compile_project(project_root: Path, manifest: PackageManifest):
     """
-    Compile the contrct and asssign the taskid to it
+    Compile the contract and assign the taskID to it
     """
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
@@ -173,18 +172,16 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     # add request contracts in temp directory
     if manifest.sources:
         for filename, source in manifest.sources.items():
-            path = (contracts_dir / filename)
+            path = contracts_dir / filename
             # NOTE: In case there is a multi-level path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source.fetch_content())
 
-    (project_root / ".build").mkdir()
-    (project_root / ".build" / "__local__.json").write_text(manifest.json())
-
     with config.using_project(project_root) as project:
-         try:
-             results[project_root.name] = project.extract_manifest()
-             tasks[project_root.name] = TaskStatus.SUCCESS
-         except Exception as e:
-             results[project_root.name] = [str(e)]
-             tasks[project_root.name] = TaskStatus.FAILED
+        try:
+            compiled_manifest = project.extract_manifest()
+            results[project_root.name] = compiled_manifest
+            tasks[project_root.name] = TaskStatus.SUCCESS
+        except Exception as e:
+            results[project_root.name] = [str(e)]
+            tasks[project_root.name] = TaskStatus.FAILED
