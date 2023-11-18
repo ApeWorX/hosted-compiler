@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from pydantic import BaseModel
 from enum import Enum
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from ethpm_types import PackageManifest
 
 import tempfile
@@ -147,16 +147,16 @@ async def get_task_exceptions(task_id: str) -> List[str]:
     return tasks[task_id]
 
 
-@app.get("/compiled_artifact/{task_id}")
-async def get_compiled_artifact(task_id: str) -> PackageManifest:
+@app.get("/compiled_artifact/{task_id}", response_model=PackageManifest)
+async def get_compiled_artifact(task_id: str) -> Any:
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
     if task_id not in tasks:
-        raise HTTPException(status_code=404, detail="task id not found")
+        raise HTTPException(status_code=404, detail=f"{task_id} not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(
-            status_code=404, detail="Task is not completed with Success status"
+            status_code=404, detail=f"{task_id} is not completed with Success status"
         )
     # TODO Debug why it is producing serialize_response raise ResponseValidationError( fastapi.exceptions.ResponseValidationError ) when you use return results[task_id] as a PackageManifest
     return results[task_id]
@@ -169,7 +169,6 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
     contracts_dir.mkdir()
-
     # add request contracts in temp directory
     if manifest.sources:
         for filename, source in manifest.sources.items():
