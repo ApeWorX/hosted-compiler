@@ -11,7 +11,7 @@ for version in installable_versions:
         if version_str == "0.3.8":
             print("Skipping Broken version: " + version_str)
 
-        elif version.is_prerelease == True:
+        elif version.is_prerelease is True:
             print("Skipping Uninstallable prerelease:" + version_str + str(version.pre))
         else:
             print("Installing version: " + version_str)

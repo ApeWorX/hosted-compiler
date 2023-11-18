@@ -1,15 +1,12 @@
-import asyncio
 import os
 import tempfile
-from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from ape import compilers, config
+from ape import config
 from ethpm_types import PackageManifest
-from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Query,
-                     Request, UploadFile)
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import (get_swagger_ui_html,
                                   get_swagger_ui_oauth2_redirect_html)
@@ -141,7 +138,8 @@ async def get_task_exceptions(task_id: str) -> List[str]:
         raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
-            status_code=400, detail=f"Task '{task_id}' is not completed with Error status"
+            status_code=400,
+            detail=f"Task '{task_id}' is not completed with Error status",
         )
     return tasks[task_id]
 
@@ -155,7 +153,8 @@ async def get_compiled_artifact(task_id: str):
         raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(
-            status_code=404, detail=f"Task '{task_id}' is not completed with Success status"
+            status_code=404,
+            detail=f"Task '{task_id}' is not completed with Success status",
         )
 
     return results[task_id].json()
