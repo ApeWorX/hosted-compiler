@@ -16,7 +16,10 @@ from pathlib import Path
 
 
 from fastapi import FastAPI, Request
-from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
+from fastapi.openapi.docs import (
+    get_swagger_ui_html,
+    get_swagger_ui_oauth2_redirect_html,
+)
 from fastapi.responses import HTMLResponse
 
 
@@ -39,7 +42,7 @@ def init_openapi(app: FastAPI):
             swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css",
         )
 
-    app.add_route('/docs', swagger_ui_html, include_in_schema=False)
+    app.add_route("/docs", swagger_ui_html, include_in_schema=False)
 
     if app.swagger_ui_oauth2_redirect_url:
 
@@ -76,6 +79,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class TaskStatus(Enum):
     PENDING = "PENDING"
@@ -142,7 +146,8 @@ async def get_task_exceptions(task_id: str) -> List[str]:
         raise HTTPException(status_code=404, detail="task id not found")
     if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
-            status_code=400, detail=f"Task: {task_id} is not completed with Error status"
+            status_code=400,
+            detail=f"Task: {task_id} is not completed with Error status",
         )
     return tasks[task_id]
 
@@ -156,7 +161,8 @@ async def get_compiled_artifact(task_id: str) -> Any:
         raise HTTPException(status_code=404, detail=f"Task: {task_id} not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(
-            status_code=404, detail=f"Task: {task_id} is not completed with Success status"
+            status_code=404,
+            detail=f"Task: {task_id} is not completed with Success status",
         )
     # TODO Debug why it is producing serialize_response raise ResponseValidationError( fastapi.exceptions.ResponseValidationError ) when you use return results[task_id] as a PackageManifest
     return results[task_id]
@@ -164,7 +170,7 @@ async def get_compiled_artifact(task_id: str) -> Any:
 
 async def compile_project(project_root: Path, manifest: PackageManifest):
     """
-    Compile the contrct and asssign the taskid to it
+    Compile the contrct and assign the taskid to it
     """
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
@@ -172,7 +178,7 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     # add request contracts in temp directory
     if manifest.sources:
         for filename, source in manifest.sources.items():
-            path = (contracts_dir / filename)
+            path = contracts_dir / filename
             # NOTE: In case there is a multi-level path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source.fetch_content())
@@ -181,9 +187,9 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     (project_root / ".build" / "__local__.json").write_text(manifest.json())
 
     with config.using_project(project_root) as project:
-         try:
-             results[project_root.name] = project.extract_manifest()
-             tasks[project_root.name] = TaskStatus.SUCCESS
-         except Exception as e:
-             results[project_root.name] = [str(e)]
-             tasks[project_root.name] = TaskStatus.FAILED
+        try:
+            results[project_root.name] = project.extract_manifest()
+            tasks[project_root.name] = TaskStatus.SUCCESS
+        except Exception as e:
+            results[project_root.name] = [str(e)]
+            tasks[project_root.name] = TaskStatus.FAILED
