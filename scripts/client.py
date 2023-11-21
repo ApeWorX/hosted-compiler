@@ -4,14 +4,17 @@ A demo client.
 
 from pathlib import Path
 
+import click
+from ape.logging import logger
+
 import requests
 from ethpm_types import ContractType, PackageManifest, Source
 from ethpm_types.source import Content
 from requests import Response
 
 URL = "http://127.0.0.1:8000"
-CONTENT = Content(__root__=Path("ERC20.vy").read_text())
-MANIFEST = PackageManifest(sources={"ERC20.vy": Source(content=CONTENT)})
+CONTENT = Content(__root__=Path("contracts/ERC20.vy").read_text())
+MANIFEST = PackageManifest(sources={"contracts/ERC20.vy": Source(content=CONTENT)})
 
 
 class Client:
@@ -42,13 +45,16 @@ class Client:
         return requests.post(f"{URL}/{url}", **kwargs)
 
 
-def main():
+@click.command()
+def cli():
     client = Client()
     task_id = client.compile()
-    print(f"Task ID is {task_id}")
+    logger.info(f"Task ID is '{task_id}'.")
+
     manifest = client.get_compiled_artifact(task_id)
-    print(manifest)
+    if contract_types := manifest.contract_types:
+        for ct in contract_types:
+            logger.success(f"Contract '{ct}' compiled!")
 
-
-if __name__ == "__main__":
-    main()
+    else:
+        logger.error("No contract types returned.")

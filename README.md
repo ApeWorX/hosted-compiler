@@ -39,5 +39,5 @@ uvicorn main:app --reload --log-level trace
 Then, run the example client, which compiles an ERC20.vy contract:
 
 ```shell
-python client.py
+ape run client
 ```

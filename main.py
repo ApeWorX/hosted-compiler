@@ -146,8 +146,14 @@ async def get_task_exceptions(task_id: str) -> List[str]:
     return tasks[task_id]
 
 
-@app.get("/compiled_artifact/{task_id}")
-async def get_compiled_artifact(task_id: str) -> PackageManifest:
+class ManifestResponse(JSONResponse):
+    pass
+
+
+# NOTE: `response_model=None` so that we only use our own validation
+#   from ethpm_types.
+@app.get("/compiled_artifact/{task_id}", response_model=None)
+async def get_compiled_artifact(task_id: str):
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
@@ -159,7 +165,8 @@ async def get_compiled_artifact(task_id: str) -> PackageManifest:
             detail=f"Task '{task_id}' is not completed with Success status",
         )
 
-    return results[task_id].dict()
+    result = results[task_id].dict()
+    return result
 
 
 async def compile_project(project_root: Path, manifest: PackageManifest):
