@@ -5,9 +5,8 @@ A demo client.
 from pathlib import Path
 
 import click
-from ape.logging import logger
-
 import requests
+from ape.logging import logger
 from ethpm_types import ContractType, PackageManifest, Source
 from ethpm_types.source import Content
 from requests import Response

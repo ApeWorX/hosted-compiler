@@ -12,7 +12,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
 )
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 
@@ -144,10 +144,6 @@ async def get_task_exceptions(task_id: str) -> List[str]:
             detail=f"Task '{task_id}' is not completed with Error status",
         )
     return tasks[task_id]
-
-
-class ManifestResponse(JSONResponse):
-    pass
 
 
 # NOTE: `response_model=None` so that we only use our own validation
