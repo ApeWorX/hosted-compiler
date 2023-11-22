@@ -1,6 +1,7 @@
 eth-ape
 fastapi
 pytest
+pydantic
 uvicorn[standard]
 vyper
 ape-vyper

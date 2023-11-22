@@ -25,3 +25,19 @@ Once it says success, you can use the `get compiled artifact` route and return t
 ## Docker implementation
 
 To use the docker implementation: `docker run -p 8000:8000  ghcr.io/apeworx/hosted-compiler:latest`.
+
+## Dev instructions
+
+Use the `uvicorn` and the example client to assist in developing the hosted compiler.
+
+Start the dev server using `uvicorn`:
+
+```sh
+uvicorn main:app --reload --log-level trace
+```
+
+Then, run the example client, which compiles an ERC20.vy contract:
+
+```shell
+ape run client
+```
