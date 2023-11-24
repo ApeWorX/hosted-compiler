@@ -8,10 +8,7 @@ from ape import config
 from ethpm_types import PackageManifest
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import (
-    get_swagger_ui_html,
-    get_swagger_ui_oauth2_redirect_html,
-)
+from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -143,12 +140,12 @@ async def get_task_exceptions(task_id: str) -> list[str]:
             status_code=400,
             detail=f"Task '{task_id}' is not completed with Error status",
         )
-    return tasks[task_id]
+    return results[task_id]
 
 
 # NOTE: `response_model=None` so that we only use our own validation
 #   from ethpm_types.
-@app.get("/compiled_artifact/{task_id}", response_model=None)
+@app.get("/artifacts/{task_id}", response_model=None)
 async def get_compiled_artifact(task_id: str):
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
@@ -161,8 +158,7 @@ async def get_compiled_artifact(task_id: str):
             detail=f"Task '{task_id}' is not completed with Success status",
         )
 
-    result = results[task_id].dict()
-    return result
+    return results[task_id]
 
 
 async def compile_project(project_root: Path, manifest: PackageManifest):
