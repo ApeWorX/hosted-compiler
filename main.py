@@ -2,7 +2,7 @@ import os
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Annotated
 
 from ape import config
 from ethpm_types import PackageManifest
@@ -83,13 +83,13 @@ class TaskStatus(Enum):
 class Task(BaseModel):
     id: str
     status: TaskStatus = TaskStatus.PENDING
-    exceptions: List[str] = []
-    manifest: Optional[PackageManifest] = None
+    exceptions: list[str] = []
+    manifest: PackageManifest | None = None
 
 
 # global db
-results = {}
-tasks: Dict[str, TaskStatus] = {}
+results: dict[str, PackageManifest | list[str]] = {}
+tasks: dict[str, TaskStatus] = {}
 
 
 def is_supported_language(filename):
@@ -132,7 +132,7 @@ async def get_task_status(task_id: str) -> TaskStatus:
 
 
 @app.get("/exceptions/{task_id}")
-async def get_task_exceptions(task_id: str) -> List[str]:
+async def get_task_exceptions(task_id: str) -> list[str]:
     """
     Fetch the exception information for a particular compilation task
     """
