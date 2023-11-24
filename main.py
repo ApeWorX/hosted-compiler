@@ -117,6 +117,26 @@ async def new_compilation_task(
     return task_id
 
 
+@app.put("/compile/{task_id}")
+async def updated_compilation_task(
+    background_tasks: BackgroundTasks,
+    task_id: str,
+    project: Annotated[PackageManifest, Body()],
+):
+    """
+    Re-triggers a compilation task using the updated project encoded as an EthPM v3 manifest.
+    """
+    project_root = Path(f"{tempfile.gettempdir()}/{task_id}")
+    if not project_root.exists():
+        raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
+
+    tasks[task_id] = TaskStatus.PENDING
+    # Run the compilation task in the background using TaskIQ
+    background_tasks.add_task(compile_project, project_root, project)
+
+    return task_id
+
+
 @app.get("/status/{task_id}")
 async def get_task_status(task_id: str) -> TaskStatus:
     """
