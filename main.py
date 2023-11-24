@@ -6,7 +6,7 @@ from typing import Annotated
 
 from ape import config
 from ethpm_types import PackageManifest
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
@@ -100,20 +100,19 @@ def is_supported_language(filename):
 
 
 @app.post("/compile")
-async def create_compilation_task(
+async def new_compilation_task(
     background_tasks: BackgroundTasks,
-    manifest: PackageManifest,
+    project: Annotated[PackageManifest, Body()],
 ):
     """
-    Creates the task with the list of vyper contracts to compile
-    and sets each file with a task.
+    Creates a compilation task using the given project encoded as an EthPM v3 manifest.
     """
     project_root = Path(tempfile.mkdtemp(""))
 
     task_id = project_root.name
     tasks[task_id] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
-    background_tasks.add_task(compile_project, project_root, manifest)
+    background_tasks.add_task(compile_project, project_root, project)
 
     return task_id
 
