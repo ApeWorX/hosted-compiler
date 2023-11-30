@@ -55,22 +55,27 @@ app = FastAPI(
 init_openapi(app)
 
 PackageManifest.update_forward_refs()
+allowed_subdomain_pattern = re.compile(r"https://deploy-preview-\d+--remixproject\.netlify\.app")
+
+# Additional allowed origins
+additional_origins = [
+    # NOTE: When running remix in local dev, this is the URL
+    "http://localhost:8080",
+    # NOTE: When running `npm run build && npm run preview`, this is the URL
+    "http://localhost:4173",
+    # NOTE: This is where the UI gets hosted
+    "https://remix.ethereum.org",
+    "https://remix-alpha.ethereum.org",
+    "https://remix-beta.ethereum.org",
+]
+
+# Combine the main domain pattern with additional origins
+allowed_origins = [allowed_subdomain_pattern.pattern] + additional_origins
+
+# Now you can use allowed_origins in your middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        # NOTE: When running remix in local dev, this is the URL
-        "http://localhost:8080",
-        # NOTE: When running `npm run build && npm run preview`, this is the URL
-        "http://localhost:4173",
-        # NOTE: This is where the UI gets hosted
-        "https://remix.ethereum.org",
-        "https://remix-alpha.ethereum.org",
-        "https://remix-beta.ethereum.org",
-        "https://deploy-preview-*--remixproject.netlify.app/",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,  # Allow URLs matching the pattern and additional origins
 )
 
 
