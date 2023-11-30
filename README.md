@@ -1,30 +1,48 @@
 # Overview
 
-**Vyper Compiler** is a tool used to help [Remix Online IDE](https://remix-project.org/) compile Vyper contracts.
+The **Hosted Compiler** is a tool used to help [Remix Online IDE](https://remix-project.org/) to remotely compile contracts.
 
-Vyper Compiler is built by [ApeWorX LTD](https://www.apeworx.io/).
+The Hosted Compiler is built by [ApeWorX LTD](https://www.apeworx.io/).
 
 If you have any questions please ask in our discord [ApeWorX Discord server](https://discord.gg/apeworx).
 
 ## Documentation
 
-The compiler is built with Ape and fastAPI. It has multiple routes to engage the compiler in different parts of your journey to  compiler the contract.
-
+The compiler is built with Ape and FastAPI.
+It has multiple routes to engage the compiler in different parts of your journey to  compiler the contract.
 
 ## Quickstart with local contracts
 
-To show that it works. Clone this repo and deploy the local host server with `uvicorn main:app --reload`
+To show that it works. Clone this repo and deploy the local host server with:
 
-Using the post route: Upload the contract file and version number of vyper.
+```sh
+uvicorn main:app
+```
 
-Wait for it compile and while you wait, you can use the temporary directory name is the task ID to check the status of it.
+Using the post route: Send an EthPM v3 ([EIP-2678](https://eips.ethereum.org/EIPS/eip-2678)) compatible package manifest object
+containing the sources and compiler configurations you wish to compile with to this hosted service.
 
-Once it says success, you can use the `get compiled artifact` route and return the manifest of the contract.
+Wait for it compile and while you wait, you can use the task ID to check the status of it.
 
+Once the status says success, you can use the `get artifacts` route and return a package manifest containing all compilation artifacts for the sources that were provided.
+
+**NOTE**: Only the supported compilers will appear in the resulting manifest.
+
+### Supported Compilers
+
+| Compiler Name | Supported |
+| ------------- | --------- |
+| Solidity      | No        |
+| Vyper         | Yes       |
+| ...           | ...       |
 
 ## Docker implementation
 
-To use the docker implementation: `docker run -p 8000:8000  ghcr.io/apeworx/hosted-compiler:latest`.
+To use the docker implementation:
+
+```sh
+docker run -p 8000:8000  ghcr.io/apeworx/hosted-compiler:latest
+```
 
 ## Dev instructions
 
@@ -33,10 +51,10 @@ Use the `uvicorn` and the example client to assist in developing the hosted comp
 Start the dev server using `uvicorn`:
 
 ```sh
-uvicorn main:app --reload --log-level trace
+uvicorn main:app --reload
 ```
 
-Then, run the example client, which compiles an ERC20.vy contract:
+Then, run the example client, which compiles an example project:
 
 ```shell
 ape run client

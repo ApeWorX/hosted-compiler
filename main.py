@@ -2,16 +2,13 @@ import os
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Annotated
 
 from ape import config
 from ethpm_types import PackageManifest
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import (
-    get_swagger_ui_html,
-    get_swagger_ui_oauth2_redirect_html,
-)
+from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -88,13 +85,13 @@ class TaskStatus(Enum):
 class Task(BaseModel):
     id: str
     status: TaskStatus = TaskStatus.PENDING
-    exceptions: List[str] = []
-    manifest: Optional[PackageManifest] = None
+    exceptions: list[str] = []
+    manifest: PackageManifest | None = None
 
 
 # global db
-results = {}
-tasks: Dict[str, TaskStatus] = {}
+results: dict[str, PackageManifest | list[str]] = {}
+tasks: dict[str, TaskStatus] = {}
 
 
 def is_supported_language(filename):
@@ -108,20 +105,39 @@ def is_supported_language(filename):
 
 
 @app.post("/compile")
-async def create_compilation_task(
+async def new_compilation_task(
     background_tasks: BackgroundTasks,
-    manifest: PackageManifest,
+    project: Annotated[PackageManifest, Body()],
 ):
     """
-    Creates the task with the list of vyper contracts to compile
-    and sets each file with a task.
+    Creates a compilation task using the given project encoded as an EthPM v3 manifest.
     """
     project_root = Path(tempfile.mkdtemp(""))
 
     task_id = project_root.name
     tasks[task_id] = TaskStatus.PENDING
     # Run the compilation task in the background using TaskIQ
-    background_tasks.add_task(compile_project, project_root, manifest)
+    background_tasks.add_task(compile_project, project_root, project)
+
+    return task_id
+
+
+@app.put("/compile/{task_id}")
+async def updated_compilation_task(
+    background_tasks: BackgroundTasks,
+    task_id: str,
+    project: Annotated[PackageManifest, Body()],
+):
+    """
+    Re-triggers a compilation task using the updated project encoded as an EthPM v3 manifest.
+    """
+    project_root = Path(f"{tempfile.gettempdir()}/{task_id}")
+    if not project_root.exists():
+        raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
+
+    tasks[task_id] = TaskStatus.PENDING
+    # Run the compilation task in the background using TaskIQ
+    background_tasks.add_task(compile_project, project_root, project)
 
     return task_id
 
@@ -137,7 +153,7 @@ async def get_task_status(task_id: str) -> TaskStatus:
 
 
 @app.get("/exceptions/{task_id}")
-async def get_task_exceptions(task_id: str) -> List[str]:
+async def get_task_exceptions(task_id: str) -> list[str]:
     """
     Fetch the exception information for a particular compilation task
     """
@@ -148,12 +164,12 @@ async def get_task_exceptions(task_id: str) -> List[str]:
             status_code=400,
             detail=f"Task '{task_id}' is not completed with Error status",
         )
-    return tasks[task_id]
+    return results[task_id]
 
 
 # NOTE: `response_model=None` so that we only use our own validation
 #   from ethpm_types.
-@app.get("/compiled_artifact/{task_id}", response_model=None)
+@app.get("/artifacts/{task_id}", response_model=None)
 async def get_compiled_artifact(task_id: str):
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
@@ -166,8 +182,7 @@ async def get_compiled_artifact(task_id: str):
             detail=f"Task '{task_id}' is not completed with Success status",
         )
 
-    result = results[task_id].dict()
-    return result
+    return results[task_id]
 
 
 async def compile_project(project_root: Path, manifest: PackageManifest):

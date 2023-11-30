@@ -5,9 +5,9 @@ A demo client.
 from pathlib import Path
 
 import click
-import requests
+import requests  # type: ignore[import-untyped]
 from ape.logging import logger
-from ethpm_types import ContractType, PackageManifest, Source
+from ethpm_types import PackageManifest, Source
 from ethpm_types.source import Content
 from requests import Response
 
@@ -27,7 +27,7 @@ class Client:
         return result
 
     def get_compiled_artifact(self, task_id: str) -> PackageManifest:
-        response = self._get(f"compiled_artifact/{task_id}")
+        response = self._get(f"artifacts/{task_id}")
 
         if "{" not in response.text:
             raise Exception(f"Error: {response.text}")
