@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-
+import os
 from main import app
 
 client = TestClient(app)
@@ -67,7 +67,7 @@ def test_cors_allowed_origins():
         "https://remix-alpha.ethereum.org",
         "https://remix-beta.ethereum.org",
         "https://deploy-preview-123--remixproject.netlify.app",
-        "https://deploy-preview-4182--remixproject.netlify.app",
+        "https://deploy-preview-3333--remixproject.netlify.app",
     ]
 
     if env_allowed_origin:
