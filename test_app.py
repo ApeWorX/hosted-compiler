@@ -67,7 +67,6 @@ def test_cors_allowed_origins():
         "https://deploy-preview-123--remixproject.netlify.app",
         "https://deploy-preview-3333--remixproject.netlify.app",        
         os.environ["VYPER_HOSTED_COMPILER_CORS_ALLOWED_ORIGINS"] = ["test-from-env-var"],
-
     ]
 
     for origin in allowed_origins:

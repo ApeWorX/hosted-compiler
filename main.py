@@ -74,10 +74,10 @@ env_var_cors_allowed_origins = [x.strip() for x in os.environ.get("VYPER_HOSTED_
 allowed_origins = [allowed_subdomain_pattern.pattern] + additional_origins + env_var_cors_allowed_origins
 
 # Now you can use allowed_origins in your middleware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,  # Allow URLs matching the pattern and additional origins
-)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=allowed_origins,  # Allow URLs matching the pattern and additional origins
+# )
 
 
 class TaskStatus(Enum):
