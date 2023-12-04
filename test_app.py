@@ -58,6 +58,8 @@ def test_get_compiled_artifact():
 
 def test_cors_allowed_origins():
     # Define a list of allowed origins based on the configuration in main.py
+    env_allowed_origin = os.environ.get("VYPER_HOSTED_COMPILER_CORS_ALLOWED_ORIGINS")
+    
     allowed_origins = [
         "http://localhost:8080",
         "http://localhost:4173",
@@ -67,6 +69,9 @@ def test_cors_allowed_origins():
         "https://deploy-preview-123--remixproject.netlify.app",
         "https://deploy-preview-4182--remixproject.netlify.app",
     ]
+
+    if env_allowed_origin:
+        allowed_origins.append(env_allowed_origin)
 
     for origin in allowed_origins:
         response = client.options("/docs", headers={"Origin": origin})
