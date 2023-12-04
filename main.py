@@ -3,6 +3,7 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
+import re
 
 from ape import config
 from ethpm_types import PackageManifest
@@ -11,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+
 
 
 def init_openapi(app: FastAPI):
@@ -66,8 +68,10 @@ additional_origins = [
     "https://remix-beta.ethereum.org",
 ]
 
+env_var_cors_allowed_origins = [x.strip() for x in os.environ.get("VYPER_HOSTED_COMPILER_CORS_ALLOWED_ORIGINS", "").split(",")]
+
 # Combine the main domain pattern with additional origins
-allowed_origins = [allowed_subdomain_pattern.pattern] + additional_origins
+allowed_origins = [allowed_subdomain_pattern.pattern] + additional_origins + env_var_cors_allowed_origins
 
 # Now you can use allowed_origins in your middleware configuration
 app.add_middleware(
