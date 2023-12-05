@@ -54,17 +54,7 @@ init_openapi(app)
 PackageManifest.update_forward_refs()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        # NOTE: When running remix in local dev, this is the URL
-        "http://localhost:8080",
-        # NOTE: When running `npm run build && npm run preview`, this is the URL
-        "http://localhost:4173",
-        # NOTE: This is where the UI gets hosted
-        "https://remix.ethereum.org",
-        "https://remix-alpha.ethereum.org",
-        "https://remix-beta.ethereum.org",
-    ],
-    allow_origin_regex="https://deploy-preview-[0-9]*--remixproject.netlify.app/",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
