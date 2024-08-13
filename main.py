@@ -3,6 +3,7 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
+from ape_vyper.exceptions import VyperCompileError
 
 from ape import config
 from ethpm_types import PackageManifest
@@ -138,7 +139,7 @@ async def get_task_status(task_id: str) -> TaskStatus:
 
 
 @app.get("/exceptions/{task_id}")
-async def get_task_exceptions(task_id: str) -> list[str]:
+async def get_task_exceptions(task_id: str) -> dict:
     """
     Fetch the exception information for a particular compilation task
     """
@@ -185,12 +186,18 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
             # NOTE: In case there is a multi-level path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source.fetch_content())
-
     with config.using_project(project_root) as project:
         try:
             compiled_manifest = project.extract_manifest()
             results[project_root.name] = compiled_manifest
             tasks[project_root.name] = TaskStatus.SUCCESS
+        except VyperCompileError as e:
+            results[project_root.name] = [
+                f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
+                for e in e.base_err.error_dict
+            ]
+            
+            tasks[project_root.name] = TaskStatus.FAILED
         except Exception as e:
-            results[project_root.name] = [str(e)]
+            results[project_root.name] = {e.__class__.__name__:str(e)}
             tasks[project_root.name] = TaskStatus.FAILED
