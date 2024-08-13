@@ -1,11 +1,13 @@
-from vyper.interfaces import ERC20
+from ethereum.ercs import IERC20
+from ethereum.ercs import IERC20Detailed
 
-implements: ERC20
-
+implements: IERC20
+implements: IERC20Detailed
 # ERC20 Token Metadata
-NAME: constant(String[20]) = "ApeERC20Token"
-SYMBOL: constant(String[5]) = "aTKN"
-DECIMALS: constant(uint8) = 18
+
+name: public(String[32])
+symbol: public(String[32])
+decimals: public(uint8)
 
 # ERC20 State Variables
 totalSupply: public(uint256)
@@ -26,39 +28,20 @@ event Approval:
 owner: public(address)
 isMinter: public(HashMap[address, bool])
 nonces: public(HashMap[address, uint256])
+
 DOMAIN_SEPARATOR: public(bytes32)
 DOMAIN_TYPE_HASH: constant(bytes32) = keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')
 PERMIT_TYPE_HASH: constant(bytes32) = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
 
-@external
+@deploy
 def __init__():
+    self.name = "ApeERC20Token"
+    self.symbol = "aTKN"
+    self.decimals = 18
+
     self.owner = msg.sender
     self.totalSupply = 1000
     self.balanceOf[msg.sender] = 1000
-    # EIP-712
-    self.DOMAIN_SEPARATOR = keccak256(
-        concat(
-            DOMAIN_TYPE_HASH,
-            keccak256(NAME),
-            keccak256("1.0"),
-            _abi_encode(chain.id, self)
-        )
-    )
-
-@pure
-@external
-def name() -> String[20]:
-    return NAME
-
-@pure
-@external
-def symbol() -> String[5]:
-    return SYMBOL
-
-@pure
-@external
-def decimals() -> uint8:
-    return DECIMALS
 
 @external
 def transfer(receiver: address, amount: uint256) -> bool:
@@ -99,7 +82,7 @@ def burn(amount: uint256):
     self.balanceOf[msg.sender] -= amount
     self.totalSupply -= amount
 
-    log Transfer(msg.sender, ZERO_ADDRESS, amount)
+    log Transfer(msg.sender, empty(address), amount)
 @external
 def mint(receiver: address, amount: uint256) -> bool:
     """
@@ -114,7 +97,7 @@ def mint(receiver: address, amount: uint256) -> bool:
     self.totalSupply += amount
     self.balanceOf[receiver] += amount
 
-    log Transfer(ZERO_ADDRESS, receiver, amount)
+    log Transfer(empty(address), receiver, amount)
     return True
 
 @external
@@ -134,7 +117,7 @@ def permit(owner: address, spender: address, amount: uint256, expiry: uint256, s
     @param signature A valid secp256k1 signature of Permit by owner encoded as r, s, v.
     @return True, if transaction completes successfully
     """
-    assert owner != ZERO_ADDRESS  # dev: invalid owner
+    assert owner != empty(address)  # dev: invalid owner
     assert expiry == 0 or expiry >= block.timestamp  # dev: permit expired
     nonce: uint256 = self.nonces[owner]
     digest: bytes32 = keccak256(
