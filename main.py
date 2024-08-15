@@ -80,7 +80,7 @@ results: dict[str, PackageManifest | list[str]] = {}
 tasks: dict[str, TaskStatus] = {}
 
 
-def is_supported_language(filename):
+def is_supported_language(filename) -> bool:
     """
     Checks if the file is a vyper file.
     """
@@ -94,7 +94,7 @@ def is_supported_language(filename):
 async def new_compilation_task(
     background_tasks: BackgroundTasks,
     project: Annotated[PackageManifest, Body()],
-):
+) -> str:
     """
     Creates a compilation task using the given project encoded as an EthPM v3 manifest.
     """
@@ -113,7 +113,7 @@ async def updated_compilation_task(
     background_tasks: BackgroundTasks,
     task_id: str,
     project: Annotated[PackageManifest, Body()],
-):
+)-> str:
     """
     Re-triggers a compilation task using the updated project encoded as an EthPM v3 manifest.
     """
@@ -156,7 +156,7 @@ async def get_task_exceptions(task_id: str) -> dict:
 # NOTE: `response_model=None` so that we only use our own validation
 #   from ethpm_types.
 @app.get("/artifacts/{task_id}", response_model=None)
-async def get_compiled_artifact(task_id: str):
+async def get_compiled_artifact(task_id: str)-> dict:
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
