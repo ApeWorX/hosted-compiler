@@ -12,13 +12,13 @@ from ethpm_types.source import Content
 from requests import Response
 
 URL = "http://127.0.0.1:8000"
-CONTENT = Content(__root__=Path("contracts/ERC20.vy").read_text())
+CONTENT = Content(root=Path("contracts/ERC20.vy").read_text())
 MANIFEST = PackageManifest(sources={"contracts/ERC20.vy": Source(content=CONTENT)})
 
 
 class Client:
     def compile(self) -> str:
-        response = self._post("compile", json=MANIFEST.dict())
+        response = self._post("compile", json=MANIFEST.model_dump())
         result = response.text.strip("'\"")
         if "{" in result:
             raise Exception(f"Error: {result}")
@@ -33,7 +33,7 @@ class Client:
             raise Exception(f"Error: {response.text}")
 
         data = response.json()
-        return PackageManifest.parse_obj(data)
+        return PackageManifest.model_validate(data)
 
     @classmethod
     def _get(cls, url: str, **kwargs) -> Response:

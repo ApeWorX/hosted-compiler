@@ -13,7 +13,7 @@ It has multiple routes to engage the compiler in different parts of your journey
 
 ## Quickstart with local contracts
 
-To show that it works. Clone this repo and deploy the local host server with:
+To show that it works, clone this repo and deploy the local host server with:
 
 ```sh
 uvicorn main:app
