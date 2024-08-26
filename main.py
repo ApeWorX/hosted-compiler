@@ -185,9 +185,9 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
             # NOTE: In case there is a multi-level path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source.fetch_content())
-    project = Project(project_root)
-    project.load_contracts()
     try:
+        project = Project(project_root)
+        project.load_contracts()
         compiled_manifest = project.extract_manifest()
         results[project_root.name] = compiled_manifest
         tasks[project_root.name] = TaskStatus.SUCCESS
