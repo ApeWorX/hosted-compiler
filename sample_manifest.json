@@ -1,0 +1,28 @@
+{
+  "manifest": "ethpm/3",
+  "name": "tmpxea07hsm",
+  "version": "0.1.0",
+  "meta": {
+    "authors": null,
+    "license": null,
+    "description": null,
+    "keywords": null,
+    "links": null
+  },
+  "sources": {
+    "contracts/contracts/Token.vy": {
+      "urls": [],
+      "checksum": null,
+      "content": "# pragma version ~=0.4.0\n\"\"\"\n@title `erc20` Module Reference Implementation\n@custom:contract-name erc20_mock\n@license GNU Affero General Public License v3.0 only\n@author pcaversaccio\n\"\"\"\n\n\n# @dev We import and implement the `IERC20` interface,\n# which is a built-in interface of the Vyper compiler.\nfrom ethereum.ercs import IERC20\nimplements: IERC20\n\n\n# @dev We import and implement the `IERC20Detailed` interface,\n# which is a built-in interface of the Vyper compiler.\nfrom ethereum.ercs import IERC20Detailed\nimplements: IERC20Detailed\n\n\n# @dev We import and implement the `IERC20Permit`\n# interface, which is written using standard Vyper\n# syntax.\nfrom snekmate.tokens.interfaces import IERC20Permit\nimplements: IERC20Permit\n\n\n# @dev We import and implement the `IERC5267` interface,\n# which is written using standard Vyper syntax.\nfrom snekmate.utils.interfaces import IERC5267\nimplements: IERC5267\n\n\n# @dev We import and initialise the `ownable` module.\nfrom snekmate.auth import ownable as ow\ninitializes: ow\n\n\n# @dev We import and initialise the `erc20` module.\nfrom snekmate.tokens import erc20\ninitializes: erc20[ownable := ow]\n\nexports: erc20.__interface__\n\n\n# @dev The following two parameters are required for the Echidna\n# fuzzing test integration: https://github.com/crytic/properties.\nisMintableOrBurnable: public(constant(bool)) = True\ninitialSupply: public(uint256)\n\n\n@deploy\n@payable\ndef __init__(name_: String[25], symbol_: String[5], decimals_: uint8, initial_supply_: uint256, name_eip712_: String[50], version_eip712_: String[20]):\n    \"\"\"\n    @dev To omit the opcodes for checking the `msg.value`\n         in the creation-time EVM bytecode, the constructor\n         is declared as `payable`.\n    @notice The initial supply of the token as well\n            as the `owner` role will be assigned to\n            the `msg.sender`.\n    @param name_ The maximum 25-character user-readable\n           string name of the token.\n    @param symbol_ The maximum 5-character user-readable\n           string symbol of the token.\n    @param decimals_ The 1-byte decimal places of the token.\n    @param initial_supply_ The 32-byte non-decimalised initial\n           supply of the token.\n    @param name_eip712_ The maximum 50-character user-readable\n           string name of the signing domain, i.e. the name\n           of the dApp or protocol.\n    @param version_eip712_ The maximum 20-character current\n           main version of the signing domain. Signatures\n           from different versions are not compatible.\n    \"\"\"\n    # The following line assigns the `owner`\n    # to the `msg.sender`.\n    ow.__init__()\n    erc20.__init__(name_, symbol_, decimals_, name_eip712_, version_eip712_)\n\n    # The following line premints an initial token\n    # supply to the `msg.sender`, which takes the\n    # underlying `decimals` value into account.\n    erc20._mint(msg.sender, initial_supply_ * 10 ** convert(decimals_, uint256))\n\n    # We assign the initial token supply required by\n    # the Echidna external harness contract.\n    self.initialSupply = erc20.totalSupply\n\n\n# @dev Duplicate implementation of the `external` function\n# `burn_from` to enable the Echidna tests for the external\n# burnable properties.\n@external\ndef burnFrom(owner: address, amount: uint256):\n    \"\"\"\n    @dev Destroys `amount` tokens from `owner`,\n         deducting from the caller's allowance.\n    @notice Note that `owner` cannot be the\n            zero address. Also, the caller must\n            have an allowance for `owner`'s tokens\n            of at least `amount`.\n    @param owner The 20-byte owner address.\n    @param amount The 32-byte token amount to be destroyed.\n    \"\"\"\n    erc20._spend_allowance(owner, msg.sender, amount)\n    erc20._burn(owner, amount)\n",
+      "installPath": null,
+      "type": null,
+      "license": null,
+      "references": null,
+      "imports": null
+    }
+  },
+  "contractTypes": {},
+  "compilers": null,
+  "deployments": {},
+  "buildDependencies": {}
+}

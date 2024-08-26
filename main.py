@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated
 from ape_vyper.exceptions import VyperCompileError
 
-from ape import config
+from ape import Project
 from ethpm_types import PackageManifest
 from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -178,7 +178,6 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
     contracts_dir.mkdir()
-
     # add request contracts in temp directory
     if manifest.sources:
         for filename, source in manifest.sources.items():
@@ -186,18 +185,19 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
             # NOTE: In case there is a multi-level path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source.fetch_content())
-    with config.using_project(project_root) as project:
-        try:
-            compiled_manifest = project.extract_manifest()
-            results[project_root.name] = compiled_manifest
-            tasks[project_root.name] = TaskStatus.SUCCESS
-        except VyperCompileError as e:
-            results[project_root.name] = [
-                f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
-                for e in e.base_err.error_dict
-            ]
-            
-            tasks[project_root.name] = TaskStatus.FAILED
-        except Exception as e:
-            results[project_root.name] = {e.__class__.__name__:str(e)}
-            tasks[project_root.name] = TaskStatus.FAILED
+    try:
+        project = Project(project_root)
+        project.load_contracts()
+        compiled_manifest = project.extract_manifest()
+        results[project_root.name] = compiled_manifest
+        tasks[project_root.name] = TaskStatus.SUCCESS
+    except VyperCompileError as e:
+        results[project_root.name] = [
+            f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
+            for e in e.base_err.error_dict
+        ]
+        
+        tasks[project_root.name] = TaskStatus.FAILED
+    except Exception as e:
+        results[project_root.name] = {e.__class__.__name__:str(e)}
+        tasks[project_root.name] = TaskStatus.FAILED
