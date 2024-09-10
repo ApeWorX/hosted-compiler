@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "~3.11"
- eth-ape = "^0.8.14"
+eth-ape = "^0.8.14"
 ape-vyper = "^0.8.00"
 fastapi = "^0.104.1"
 # NOTE: Pinning to v1 until ape supports v2, because otherwise FastAPI barfs
