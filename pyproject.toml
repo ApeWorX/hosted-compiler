@@ -12,6 +12,7 @@ packages = [
 python = "~3.11"
 eth-ape = "^0.8.00"
 ape-vyper = "^0.8.00"
+ethpm-types = ">=0.6.16"
 fastapi = "^0.104.1"
 # NOTE: Pinning to v1 until ape supports v2, because otherwise FastAPI barfs
 pydantic = "^2.00"
