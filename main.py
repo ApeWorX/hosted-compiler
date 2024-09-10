@@ -3,7 +3,7 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
-from ape.managers.compiler import CompilerError
+from ape.managers.compilers import CompilerError
 
 from ape import Project
 from ethpm_types import PackageManifest
