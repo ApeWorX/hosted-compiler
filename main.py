@@ -156,7 +156,7 @@ async def get_task_exceptions(task_id: str) -> dict:
 # NOTE: `response_model=None` so that we only use our own validation
 #   from ethpm_types.
 @app.get("/artifacts/{task_id}", response_model=None)
-async def get_compiled_artifact(task_id: str)-> dict:
+async def get_compiled_artifact(task_id: str)-> list[str]:
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
