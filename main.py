@@ -192,6 +192,7 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     except Exception as e:
         results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
+        return
 
     results[project_root.name] = manifest
     tasks[project_root.name] = TaskStatus.SUCCESS
