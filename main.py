@@ -181,6 +181,7 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     project = Project.from_manifest(manifest)
 
     try:
+        # NOTE: Updates itself because manifest projects are their own cache.
         project.load_contracts()
     except CompilerError as e:
         results[project_root.name] = [
