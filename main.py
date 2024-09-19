@@ -52,7 +52,7 @@ app = FastAPI(
 )
 init_openapi(app)
 
-PackageManifest.update_forward_refs()
+PackageManifest.model_rebuild()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
