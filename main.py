@@ -3,9 +3,9 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
-from ape.managers.compilers import CompilerError
 
 from ape import Project
+from ape.managers.compilers import CompilerError
 from ethpm_types import PackageManifest
 from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -113,7 +113,7 @@ async def updated_compilation_task(
     background_tasks: BackgroundTasks,
     task_id: str,
     project: Annotated[PackageManifest, Body()],
-)-> str:
+) -> str:
     """
     Re-triggers a compilation task using the updated project encoded as an EthPM v3 manifest.
     """
@@ -179,10 +179,9 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     contracts_dir = project_root / "contracts"
     contracts_dir.mkdir()
     project = Project.from_manifest(manifest)
+
     try:
         project.load_contracts()
-        results[project_root.name] = manifest
-        tasks[project_root.name] = TaskStatus.SUCCESS
     except CompilerError as e:
         results[project_root.name] = [
             f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
@@ -190,5 +189,8 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
         ]
         tasks[project_root.name] = TaskStatus.FAILED
     except Exception as e:
-        results[project_root.name] = {e.__class__.__name__:str(e)}
+        results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
+
+    results[project_root.name] = manifest
+    tasks[project_root.name] = TaskStatus.SUCCESS
