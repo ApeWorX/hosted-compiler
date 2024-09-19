@@ -2,7 +2,6 @@ import re
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-
 from main import app
 
 client = TestClient(app)
@@ -64,3 +63,8 @@ def test_get_compiled_artifact():
     assert "name" in data
     assert "contractTypes" in data
     assert "compilers" in data
+
+    # Show we get the ERC20 contract-type.
+    assert "ERC20" in data["contractTypes"]
+    assert "abi" in data["contractTypes"]["ERC20"]
+    assert len(data["contractTypes"]["ERC20"]["abi"]) > 1
