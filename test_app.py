@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from main import app
+import pytest
 
 client = TestClient(app)
 
@@ -58,8 +59,20 @@ def test_get_compiled_artifact():
     manifest = {"manifest": "ethpm/3", "sources": {source_id: source_text}}
     task_id = client.post("/compile", json=manifest).json()
     response = client.get(f"/artifacts/{task_id}")
-    assert response.status_code == 200
     data = response.json()
+
+    if response.status_code == 404:
+        # Bad request. Let's check for the exception.
+        response = client.get(f"/exceptions/{task_id}")
+        if response.status_code == 200:
+            # This will show actual compiler errors in the tests.
+            error_data = response.json()
+            errors = "\n".join(error_data) if isinstance(error_data, list) else f"{error_data}"
+            pytest.fail(errors)
+
+    else:
+        assert response.status_code == 200, data
+
     assert "name" in data
     assert "contractTypes" in data
     assert "compilers" in data

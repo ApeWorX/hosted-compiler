@@ -178,7 +178,19 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
     contracts_dir.mkdir()
-    project = Project.from_manifest(manifest)
+
+    # Hacked in for testing..
+    project = Project.from_manifest(
+        manifest,
+        config_override={
+            "dependencies": [
+                {
+                    "pypi": "snekmate",
+                    "config_override": {"base_path": "src", "contracts_folder": "snekmate"},
+                }
+            ],
+        },
+    )
 
     try:
         # NOTE: Updates itself because manifest projects are their own cache.

@@ -1,5 +1,6 @@
 from ethereum.ercs import IERC20
 from ethereum.ercs import IERC20Detailed
+from snekmate.tokens import erc20
 
 implements: IERC20
 implements: IERC20Detailed
