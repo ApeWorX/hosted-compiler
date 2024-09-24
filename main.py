@@ -178,19 +178,11 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
     contracts_dir.mkdir()
+    project = Project.from_manifest(manifest)
 
-    # add request contracts in temp directory
-    if manifest.sources:
-        for filename, source in manifest.sources.items():
-            path = contracts_dir / filename
-            # NOTE: In case there is a multi-level path
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(source.fetch_content())
     try:
-        project = Project(project_root)
-        compiled_manifest = project.extract_manifest()
-        results[project_root.name] = compiled_manifest
-        tasks[project_root.name] = TaskStatus.SUCCESS
+        # NOTE: Updates itself because manifest projects are their own cache.
+        project.load_contracts()
     except CompilerError as e:
         results[project_root.name] = [
             f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
@@ -200,3 +192,6 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
     except Exception as e:
         results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
+    else:
+        results[project_root.name] = manifest
+        tasks[project_root.name] = TaskStatus.SUCCESS
