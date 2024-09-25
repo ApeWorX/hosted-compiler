@@ -44,6 +44,12 @@ src_paths = ["main.py", "test_app.py"]
 check_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
+[tool.pytest.ini_options]
+# Ape's Pytest plugin is not needed and interferes a bit.
+addopts = """
+    -p no:ape_test
+"""
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
