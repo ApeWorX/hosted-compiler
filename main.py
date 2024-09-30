@@ -12,7 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from typing import Optional
 
+
+class CompilerErrorModel(BaseModel):
+    status: str = "failed"
+    message: str
+    column: Optional[int] = None
+    line: Optional[int] = None
+    error_type: str
+
+    class Config:
+        orm_mode = True
 
 def init_openapi(app: FastAPI):
     # https://github.com/tiangolo/fastapi/discussions/10524
@@ -138,13 +149,14 @@ async def get_task_status(task_id: str) -> TaskStatus:
     return tasks[task_id]
 
 
-@app.get("/exceptions/{task_id}")
+@app.get("/exceptions/{task_id}", response_model=list[CompilerErrorModel])
 async def get_task_exceptions(task_id: str) -> dict:
     """
     Fetch the exception information for a particular compilation task
     """
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
+    
     if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
             status_code=400,
@@ -192,6 +204,25 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
         results[project_root.name] = compiled_manifest
         tasks[project_root.name] = TaskStatus.SUCCESS
     except CompilerError as e:
+        breakpoint()
+        # Convert the error details into the Pydantic model
+        error_details = [
+            CompilerErrorModel(
+                message=e.get('message', 'Unknown error'),
+                column=e.get('sourceLocation', {}).get('column', None),
+                line=e.get('sourceLocation', {}).get('line', None),
+                error_type=e.__class__.__name__
+            ).dict()  # Converts to a dictionary for JSON serialization
+            for e in e.base_err.error_dict
+        ]
+        
+        results[project_root.name] = error_details
+        tasks[project_root.name] = TaskStatus.FAILED
+    
+    except CompilerError as e:
+        # convert into a pydantic model class subclass base model and every single field that i list will be a filed propery of model and conver to js via fastapi
+        # js schema convert into python checmo for pydancic 
+        breakpoint()
         results[project_root.name] = [
             f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
             for e in e.base_err.error_dict
