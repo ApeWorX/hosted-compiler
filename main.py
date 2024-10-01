@@ -12,8 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
-from typing import Optional
-
 
 class CompilerErrorResponse(BaseModel):
     status: str = "failed"
@@ -106,6 +104,7 @@ async def new_compilation_task(
     """
     Creates a compilation task using the given project encoded as an EthPM v3 manifest.
     """
+    breakpoint()
     project_root = Path(tempfile.mkdtemp(""))
 
     task_id = project_root.name
@@ -147,7 +146,7 @@ async def get_task_status(task_id: str) -> TaskStatus:
 
 
 @app.get("/exceptions/{task_id}")
-async def get_task_exceptions(task_id: str) -> list[CompilerErrorModel]:
+async def get_task_exceptions(task_id: str) -> list[CompilerErrorResponse]:
     """
     Fetch the exception information for a particular compilation task
     """
@@ -180,7 +179,7 @@ async def get_compiled_artifact(task_id: str)-> dict:
     return results[task_id]
 
 
-async def compile_project(project_root: Path, manifest: PackageManifest):
+async def compile_project(project_root: Path, manifest: PackageManifest) -> None:
     """
     Compile the contract and assign the taskID to it
     """
@@ -201,30 +200,27 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
         results[project_root.name] = compiled_manifest
         tasks[project_root.name] = TaskStatus.SUCCESS
     except CompilerError as e:
-        breakpoint()
         # Convert the error details into the Pydantic model
         error_details = [
-            CompilerErrorModel(
+            CompilerErrorResponse(
                 message=e.get('message', str(e)),
                 column=e.get('sourceLocation', {}).get('column'),
                 line=e.get('sourceLocation', {}).get('line'),
                 error_type=e.__class__.__name__
             )
             for e in e.base_err.error_dict
-        ]
+            ]
         
         results[project_root.name] = error_details
         tasks[project_root.name] = TaskStatus.FAILED
-    
-    except CompilerError as e:
-        # convert into a pydantic model class subclass base model and every single field that i list will be a filed propery of model and conver to js via fastapi
-        # js schema convert into python checmo for pydancic 
-        breakpoint()
-        results[project_root.name] = [
-            f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
-            for e in e.base_err.error_dict
-        ]
-        tasks[project_root.name] = TaskStatus.FAILED
+
     except Exception as e:
-        results[project_root.name] = {e.__class__.__name__:str(e)}
+        # Handle any other exceptions that occur
+        generic_error_response = CompilerErrorResponse(
+            message=str(e),
+            column=None,  # Adjust if applicable
+            line=None,    # Adjust if applicable
+            error_type=e.__class__.__name__
+        )
+        results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
