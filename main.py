@@ -11,19 +11,16 @@ from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
-class CompilerErrorModel(BaseModel):
+class CompilerErrorResponse(BaseModel):
     status: str = "failed"
     message: str
-    column: Optional[int] = None
-    line: Optional[int] = None
-    error_type: str
-
-    class Config:
-        orm_mode = True
+    column: int | None = None
+    line: int | None = None
+    error_type: str = Field(alias="errorType")
 
 def init_openapi(app: FastAPI):
     # https://github.com/tiangolo/fastapi/discussions/10524
@@ -149,8 +146,8 @@ async def get_task_status(task_id: str) -> TaskStatus:
     return tasks[task_id]
 
 
-@app.get("/exceptions/{task_id}", response_model=list[CompilerErrorModel])
-async def get_task_exceptions(task_id: str) -> dict:
+@app.get("/exceptions/{task_id}")
+async def get_task_exceptions(task_id: str) -> list[CompilerErrorModel]:
     """
     Fetch the exception information for a particular compilation task
     """
@@ -208,11 +205,11 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
         # Convert the error details into the Pydantic model
         error_details = [
             CompilerErrorModel(
-                message=e.get('message', 'Unknown error'),
-                column=e.get('sourceLocation', {}).get('column', None),
-                line=e.get('sourceLocation', {}).get('line', None),
+                message=e.get('message', str(e)),
+                column=e.get('sourceLocation', {}).get('column'),
+                line=e.get('sourceLocation', {}).get('line'),
                 error_type=e.__class__.__name__
-            ).dict()  # Converts to a dictionary for JSON serialization
+            )
             for e in e.base_err.error_dict
         ]
         
