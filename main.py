@@ -170,7 +170,7 @@ async def get_compiled_artifact(task_id: str)-> dict:
         raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(
-            status_code=404,
+            status_code=400,
             detail=f"Task '{task_id}' is not completed with Success status",
         )
 
@@ -205,12 +205,6 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
                 error_type=e.__class__.__name__,
             )
             ]
-    #     class CompilerErrorResponse(BaseModel):
-    # status: str = "failed"
-    # message: str
-    # #column: int | None = None
-    # #line: int | None = None
-    # error_type: str = Field(alias="error_type")
         results[project_root.name] = error_details
         tasks[project_root.name] = TaskStatus.FAILED
 
