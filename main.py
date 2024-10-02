@@ -16,9 +16,9 @@ from pydantic import BaseModel, Field
 class CompilerErrorResponse(BaseModel):
     status: str = "failed"
     message: str
-    column: int | None = None
-    line: int | None = None
-    error_type: str = Field(alias="errorType")
+    #column: int | None = None
+    #line: int | None = None
+    error_type: str
 
 def init_openapi(app: FastAPI):
     # https://github.com/tiangolo/fastapi/discussions/10524
@@ -95,7 +95,6 @@ def is_supported_language(filename) -> bool:
     _, file_extension = os.path.splitext(filename)
     return file_extension.lower() in supported_languages
 
-
 @app.post("/compile")
 async def new_compilation_task(
     background_tasks: BackgroundTasks,
@@ -104,7 +103,6 @@ async def new_compilation_task(
     """
     Creates a compilation task using the given project encoded as an EthPM v3 manifest.
     """
-    breakpoint()
     project_root = Path(tempfile.mkdtemp(""))
 
     task_id = project_root.name
@@ -203,14 +201,16 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
         # Convert the error details into the Pydantic model
         error_details = [
             CompilerErrorResponse(
-                message=e.get('message', str(e)),
-                column=e.get('sourceLocation', {}).get('column'),
-                line=e.get('sourceLocation', {}).get('line'),
-                error_type=e.__class__.__name__
+                message=str(e),
+                error_type=e.__class__.__name__,
             )
-            for e in e.base_err.error_dict
             ]
-        
+    #     class CompilerErrorResponse(BaseModel):
+    # status: str = "failed"
+    # message: str
+    # #column: int | None = None
+    # #line: int | None = None
+    # error_type: str = Field(alias="error_type")
         results[project_root.name] = error_details
         tasks[project_root.name] = TaskStatus.FAILED
 
@@ -222,5 +222,7 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
             line=None,    # Adjust if applicable
             error_type=e.__class__.__name__
         )
+        
+        
         results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
