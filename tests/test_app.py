@@ -10,41 +10,47 @@ def test_create_compilation_task(client):
     # empty sources should work
     response = client.post("/compile", json={"manifest": "ethpm/3"})
     assert response.status_code == 200
-    data = response.json()
-    assert "task_id" in data
+    task_id = response.json()
+    assert isinstance(task_id, str)
 
 
 def test_get_task_status(client):
     # Test get task status
     response = client.get("/status/some_invalid_task_id")
-    assert response.status_code == 400  # Invalid task_id should return 400 Bad Request
+    assert response.status_code == 404  # Not found
 
-    response = client.get("/status/some_valid_task_id")
+    task_id = client.post("/compile", json={"manifest": "ethpm/3"}).json()
+    response = client.get(f"/status/{task_id}")
     assert response.status_code == 200
     data = response.json()
-    assert data in ["In Progress", "Success", "Error"]
+    assert data.lower() in ["in progress", "success", "error"]
 
 
 def test_get_task_exceptions(client):
     # Test get task exceptions
     response = client.get("/exceptions/some_invalid_task_id")
-    assert response.status_code == 400  # Invalid task_id should return 400 Bad Request
+    assert response.status_code == 404  # Not found
 
     # Assuming the task_id has an Error status
-    response = client.get("/exceptions/some_valid_task_id")
-    assert response.status_code == 200
+    task_id = client.post("/compile", json={"manifest": "ethpm/3"}).json()
+    response = client.get(f"/exceptions/{task_id}")
+    assert response.status_code == 400
     data = response.json()
-    assert "task_id" in data
-    assert "compilation_errors" in data
+    actual = data["detail"]
+    assert re.match(r"Task '\w*' is not completed with Error status", actual)
 
 
 def test_get_compiled_artifact(client):
     # Test get compiled artifact
     response = client.get("/artifacts/some_invalid_task_id")
-    assert response.status_code == 400  # Invalid task_id should return 400 Bad Request
+    assert response.status_code == 404  # Not found
 
     # Assuming the task_id has a Success status
-    response = client.get("/artifacts/some_valid_task_id")
+    source_id = "contracts/ERC20.vy"
+    source_text = (Path(__file__).parent / source_id).read_text()
+    manifest = {"manifest": "ethpm/3", "sources": {source_id: source_text}}
+    task_id = client.post("/compile", json=manifest).json()
+    response = client.get(f"/artifacts/{task_id}")
     assert response.status_code == 200
     data = response.json()
     assert "contract_name" in data

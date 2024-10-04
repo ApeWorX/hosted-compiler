@@ -3,9 +3,9 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
-from ape.managers.compilers import CompilerError
 
 from ape import Project
+from ape.managers.compilers import CompilerError
 from ethpm_types import PackageManifest
 from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,7 +58,7 @@ app = FastAPI(
 )
 init_openapi(app)
 
-PackageManifest.update_forward_refs()
+PackageManifest.model_rebuild()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -118,7 +118,7 @@ async def updated_compilation_task(
     background_tasks: BackgroundTasks,
     task_id: str,
     project: Annotated[PackageManifest, Body()],
-)-> str:
+) -> str:
     """
     Re-triggers a compilation task using the updated project encoded as an EthPM v3 manifest.
     """
@@ -162,7 +162,7 @@ async def get_task_exceptions(task_id: str) -> list[CompilerErrorResponse]:
 # NOTE: `response_model=None` so that we only use our own validation
 #   from ethpm_types.
 @app.get("/artifacts/{task_id}", response_model=None)
-async def get_compiled_artifact(task_id: str)-> dict:
+async def get_compiled_artifact(task_id: str) -> dict:
     """
     Fetch the compiled artifact data in ethPM v3 format for a particular task
     """
@@ -184,19 +184,11 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
     # Create a contracts directory
     contracts_dir = project_root / "contracts"
     contracts_dir.mkdir()
-    
-    # add request contracts in temp directory
-    if manifest.sources:
-        for filename, source in manifest.sources.items():
-            path = contracts_dir / filename
-            # NOTE: In case there is a multi-level path
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(source.fetch_content())
+    project = Project.from_manifest(manifest)
+
     try:
-        project = Project(project_root)
-        compiled_manifest = project.extract_manifest()
-        results[project_root.name] = compiled_manifest
-        tasks[project_root.name] = TaskStatus.SUCCESS
+        # NOTE: Updates itself because manifest projects are their own cache.
+        project.load_contracts()
     except CompilerError as e:
         # Convert the error details into the Pydantic model
         error_details = [
@@ -219,3 +211,6 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
         
         results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
+    else:
+        results[project_root.name] = manifest
+        tasks[project_root.name] = TaskStatus.SUCCESS
