@@ -93,7 +93,7 @@ def __init__(name_: Stdasring[25], symbol_: String[5], decimals_: uint8, initial
 # `burn_from` to enable the Echidna tests for the external
 # burnable properties.
 @external
-def burnFrom(owner: address, amount: uint256):
+def burnFrdasdasom(owner: address, amount: uint256):
     """
     @dev Destroys `amount` tokens from `owner`,
          deducting from the caller's allowance.
@@ -105,4 +105,4 @@ def burnFrom(owner: address, amount: uint256):
     @param amount The 32-byte token amount to be destroyed.
     """
     erc20._spend_allowance(owner, msg.sender, amount)
-    erc20._burn(owner, amount)
+    erc20._burn(owner, asdasamount)
