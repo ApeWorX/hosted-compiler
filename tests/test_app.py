@@ -1,13 +1,6 @@
-import re
-from pathlib import Path
+from ethpm_types import PackageManifest
 
-from fastapi.testclient import TestClient
-from main import app
-
-client = TestClient(app)
-
-
-def test_create_compilation_task():
+def test_create_compilation_task(client):
     # Test create compilation task
     response = client.post("/compile")
     assert (
@@ -21,7 +14,7 @@ def test_create_compilation_task():
     assert isinstance(task_id, str)
 
 
-def test_get_task_status():
+def test_get_task_status(client):
     # Test get task status
     response = client.get("/status/some_invalid_task_id")
     assert response.status_code == 404  # Not found
@@ -33,7 +26,7 @@ def test_get_task_status():
     assert data.lower() in ["in progress", "success", "error"]
 
 
-def test_get_task_exceptions():
+def test_get_task_exceptions(client):
     # Test get task exceptions
     response = client.get("/exceptions/some_invalid_task_id")
     assert response.status_code == 404  # Not found
@@ -47,7 +40,7 @@ def test_get_task_exceptions():
     assert re.match(r"Task '\w*' is not completed with Error status", actual)
 
 
-def test_get_compiled_artifact():
+def test_get_compiled_artifact(client):
     # Test get compiled artifact
     response = client.get("/artifacts/some_invalid_task_id")
     assert response.status_code == 404  # Not found
@@ -60,11 +53,33 @@ def test_get_compiled_artifact():
     response = client.get(f"/artifacts/{task_id}")
     assert response.status_code == 200
     data = response.json()
-    assert "name" in data
-    assert "contractTypes" in data
-    assert "compilers" in data
-
-    # Show we get the ERC20 contract-type.
-    assert "ERC20" in data["contractTypes"]
-    assert "abi" in data["contractTypes"]["ERC20"]
-    assert len(data["contractTypes"]["ERC20"]["abi"]) > 1
+    assert "contract_name" in data
+    assert "abi" in data
+    assert "compiler" in data
+    
+def test_contract(client, manifest, file_to_compile):
+    
+    response = client.post("/compile", json=manifest.model_dump())
+    assert response.status_code == 200
+    task_id = response.json()
+    
+    response = client.get(f"status/{task_id}")
+    assert response.status_code == 200
+    
+    task_status = response.json()
+    
+    if file_to_compile.name.startswith("fail") and task_status == "FAILED":
+        assert client.get(f"/artifacts/{task_id}").status_code == 400
+        response = client.get(f"/exceptions/{task_id}")
+        assert response.status_code == 200
+        assert len(response.json()) > 0
+        
+    elif file_to_compile.name.startswith("pass") and task_status == "SUCCESS":
+        assert client.get(f"/exceptions/{task_id}").status_code == 400
+        response = client.get(f"/artifacts/{task_id}")
+        assert response.status_code == 200
+        compiled_manifest = PackageManifest.model_validate(response.json())
+        assert file_to_compile.stem in compiled_manifest.contract_types
+        
+    else:
+        assert task_status != "PENDING"

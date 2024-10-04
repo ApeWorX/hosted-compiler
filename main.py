@@ -13,6 +13,14 @@ from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redi
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+import re
+
+class CompilerErrorResponse(BaseModel):
+    status: str = "failed"
+    message: str
+    column: int | None = None
+    line: int | None = None
+    error_type: str
 
 def init_openapi(app: FastAPI):
     # https://github.com/tiangolo/fastapi/discussions/10524
@@ -89,7 +97,6 @@ def is_supported_language(filename) -> bool:
     _, file_extension = os.path.splitext(filename)
     return file_extension.lower() in supported_languages
 
-
 @app.post("/compile")
 async def new_compilation_task(
     background_tasks: BackgroundTasks,
@@ -139,12 +146,13 @@ async def get_task_status(task_id: str) -> TaskStatus:
 
 
 @app.get("/exceptions/{task_id}")
-async def get_task_exceptions(task_id: str) -> list[str]:
+async def get_task_exceptions(task_id: str) -> list[CompilerErrorResponse]:
     """
     Fetch the exception information for a particular compilation task
     """
     if task_id not in tasks:
         raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
+    
     if tasks[task_id] is not TaskStatus.FAILED:
         raise HTTPException(
             status_code=400,
@@ -164,14 +172,22 @@ async def get_compiled_artifact(task_id: str) -> dict:
         raise HTTPException(status_code=404, detail=f"task ID '{task_id}' not found")
     if tasks[task_id] is not TaskStatus.SUCCESS:
         raise HTTPException(
-            status_code=404,
+            status_code=400,
             detail=f"Task '{task_id}' is not completed with Success status",
         )
 
     return results[task_id]
 
+def extract_line_and_column(error_message: str) -> tuple[int, int]:
+    # Regex to capture "line <line_number>:<column_number>"
+    match = re.search(r'line (\d+):(\d+)', error_message)
+    if match:
+        line_number = int(match.group(1))  # First capture group is the line number
+        column_number = int(match.group(2))  # Second capture group is the column number
+        return line_number, column_number
+    return 0, 0  # Default to 0 for both if no match is found
 
-async def compile_project(project_root: Path, manifest: PackageManifest):
+async def compile_project(project_root: Path, manifest: PackageManifest) -> None:
     """
     Compile the contract and assign the taskID to it
     """
@@ -184,13 +200,37 @@ async def compile_project(project_root: Path, manifest: PackageManifest):
         # NOTE: Updates itself because manifest projects are their own cache.
         project.load_contracts()
     except CompilerError as e:
-        results[project_root.name] = [
-            f"{e['sourceLocation'].get('file', 'Unknown file')}\n{e['type']}: {e.get('formattedMessage', e['message'])}"
-            for e in e.base_err.error_dict
-        ]
+        error_message = str(e)
+        line, column = None, None
+        
+         # Regex pattern to find "line X:Y"
+        match = re.search(r'line (\d+):(\d+)', error_message)
+        if match:
+            line = int(match.group(1))
+            column = int(match.group(2))
+        
+        # Convert the error details into the Pydantic model
+        error_details = [
+            CompilerErrorResponse(
+                message=str(e),
+                line=line,
+                column=column,
+                error_type=e.__class__.__name__,
+            )
+            ]
+        results[project_root.name] = error_details
         tasks[project_root.name] = TaskStatus.FAILED
+
     except Exception as e:
-        results[project_root.name] = {e.__class__.__name__: str(e)}
+        # Handle any other exceptions that occur
+        generic_error_response = CompilerErrorResponse(
+            message=str(e),
+            column=0,  # Default for general exceptions, since they might not have source locations
+            line=0,    # Default for general exceptions
+            error_type=e.__class__.__name__
+        )
+        
+        results[project_root.name] = [generic_error_response]
         tasks[project_root.name] = TaskStatus.FAILED
     else:
         results[project_root.name] = manifest
