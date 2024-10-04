@@ -11,13 +11,15 @@ from fastapi import BackgroundTasks, Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
+import re
 
 class CompilerErrorResponse(BaseModel):
     status: str = "failed"
     message: str
-    #column: int | None = None
-    #line: int | None = None
+    column: int | None = None
+    line: int | None = None
     error_type: str
 
 def init_openapi(app: FastAPI):
@@ -176,6 +178,14 @@ async def get_compiled_artifact(task_id: str) -> dict:
 
     return results[task_id]
 
+def extract_line_and_column(error_message: str) -> tuple[int, int]:
+    # Regex to capture "line <line_number>:<column_number>"
+    match = re.search(r'line (\d+):(\d+)', error_message)
+    if match:
+        line_number = int(match.group(1))  # First capture group is the line number
+        column_number = int(match.group(2))  # Second capture group is the column number
+        return line_number, column_number
+    return 0, 0  # Default to 0 for both if no match is found
 
 async def compile_project(project_root: Path, manifest: PackageManifest) -> None:
     """
@@ -190,10 +200,21 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
         # NOTE: Updates itself because manifest projects are their own cache.
         project.load_contracts()
     except CompilerError as e:
+        error_message = str(e)
+        line, column = None, None
+        
+         # Regex pattern to find "line X:Y"
+        match = re.search(r'line (\d+):(\d+)', error_message)
+        if match:
+            line = int(match.group(1))
+            column = int(match.group(2))
+        
         # Convert the error details into the Pydantic model
         error_details = [
             CompilerErrorResponse(
                 message=str(e),
+                line=line,
+                column=column,
                 error_type=e.__class__.__name__,
             )
             ]
@@ -204,8 +225,8 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
         # Handle any other exceptions that occur
         generic_error_response = CompilerErrorResponse(
             message=str(e),
-            column=None,  # Adjust if applicable
-            line=None,    # Adjust if applicable
+            column=0,  # Default for general exceptions, since they might not have source locations
+            line=0,    # Default for general exceptions
             error_type=e.__class__.__name__
         )
         
