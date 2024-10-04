@@ -217,6 +217,5 @@ async def compile_project(project_root: Path, manifest: PackageManifest) -> None
             error_type=e.__class__.__name__
         )
         
-        
         results[project_root.name] = {e.__class__.__name__: str(e)}
         tasks[project_root.name] = TaskStatus.FAILED
