@@ -40,6 +40,7 @@ jobs:
           IMAGE_TAG: latest
         run: |
           docker build \
+            --build-arg GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
             -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
             .
           echo "image=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
