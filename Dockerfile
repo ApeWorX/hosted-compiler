@@ -24,8 +24,7 @@ RUN poetry install --only main --no-interaction --no-root
 FROM python:3.11-slim AS runtime
 
 ARG GITHUB_TOKEN
-ENV GITHUB_TOKEN=${GITHUB_TOKEN} \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 ENV PATH=/app/.venv/bin:$PATH
